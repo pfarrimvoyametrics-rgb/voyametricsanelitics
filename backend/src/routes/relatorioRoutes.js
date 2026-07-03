@@ -1,5 +1,7 @@
 /**
- * relatorioRoutes.js — Relatórios analíticos (apenas admin).
+ * relatorioRoutes.js — Relatórios analíticos.
+ *   GET /            — dados (admin da empresa: básico; super_admin: avançado).
+ *   GET /pdf, /lideranca/pdf — exportação (SÓ super_admin / consultor).
  *
  * GET /api/relatorios
  *   ?de=YYYY-MM-DD&ate=YYYY-MM-DD&granularidade=dia|semana|mes
@@ -10,7 +12,7 @@ const relatorioModel = require('../models/relatorioModel');
 const insightsService = require('../services/insightsService');
 const pdfRelatorio = require('../services/pdfRelatorio');
 const pdfLideranca = require('../services/pdfLideranca');
-const { exigirAutenticacao, exigirAdmin, resolverOrg } = require('../middleware/auth');
+const { exigirAutenticacao, exigirAdmin, exigirSuperAdmin, resolverOrg } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -88,8 +90,8 @@ router.get('/', exigirAutenticacao, exigirAdmin, resolverOrg, async (req, res) =
   }
 });
 
-// GET /api/relatorios/pdf — relatório de marca, gerado no servidor.
-router.get('/pdf', exigirAutenticacao, exigirAdmin, resolverOrg, async (req, res) => {
+// GET /api/relatorios/pdf — relatório de marca (só o consultor/super_admin).
+router.get('/pdf', exigirAutenticacao, exigirSuperAdmin, resolverOrg, async (req, res) => {
   try {
     const dados = await obterDados(req);
     const buffer = await pdfRelatorio.gerar(dados);
@@ -103,8 +105,8 @@ router.get('/pdf', exigirAutenticacao, exigirAdmin, resolverOrg, async (req, res
   }
 });
 
-// GET /api/relatorios/lideranca/pdf — Balanço de Liderança de um operador.
-router.get('/lideranca/pdf', exigirAutenticacao, exigirAdmin, resolverOrg, async (req, res) => {
+// GET /api/relatorios/lideranca/pdf — Balanço de Liderança (só o consultor/super_admin).
+router.get('/lideranca/pdf', exigirAutenticacao, exigirSuperAdmin, resolverOrg, async (req, res) => {
   try {
     const dados = await obterDados(req);
     const buffer = await pdfLideranca.gerar(dados);

@@ -11,7 +11,8 @@ const PERFIS = [
   { email: 'ines.comercial@empresa.pt', nome: 'Inês Carvalho', papel: 'Comercial', cor: 'bg-emerald-600' },
 ];
 
-export default function Login() {
+export default function Login({ variante = 'empresa' }) {
+  const ehConsultor = variante === 'consultor';
   const { entrar } = useAuth();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -40,15 +41,17 @@ export default function Login() {
     <div className="grid min-h-full place-items-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center gap-3">
-          <div className="grid h-11 w-11 place-items-center rounded-xl bg-indigo-600 text-white shadow">
+          <div className={`grid h-11 w-11 place-items-center rounded-xl text-white shadow ${ehConsultor ? 'bg-slate-900' : 'bg-indigo-600'}`}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M22 12h-6l-2 3h-4l-2-3H2" />
               <path d="M5.5 5.5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6l3.5-6.5Z" />
             </svg>
           </div>
           <div>
-            <h1 className="text-lg font-bold text-slate-800">Central de Tickets</h1>
-            <p className="text-sm text-slate-500">Entre com o seu email e palavra-passe.</p>
+            <h1 className="text-lg font-bold text-slate-800">{ehConsultor ? 'Consola do Consultor' : 'Central de Tickets'}</h1>
+            <p className="text-sm text-slate-500">
+              {ehConsultor ? 'Plataforma VoyaMetrics — acesso do super administrador.' : 'Entre com o seu email e palavra-passe.'}
+            </p>
           </div>
         </div>
 
@@ -114,6 +117,8 @@ export default function Login() {
 
           {erro && <p className="mt-2 text-sm text-rose-600">{erro}</p>}
 
+          {!ehConsultor && import.meta.env.DEV && (
+          <>
           <div className="my-5 flex items-center gap-3 text-xs text-slate-400">
             <span className="h-px flex-1 bg-slate-200" /> entrada rápida (demo) <span className="h-px flex-1 bg-slate-200" />
           </div>
@@ -136,12 +141,16 @@ export default function Login() {
               </button>
             ))}
           </div>
+          </>
+          )}
         </div>
 
-        <p className="mt-4 text-center text-xs text-slate-400">
-          Os atalhos de demonstração usam a palavra-passe <code>demo1234</code>. O super
-          administrador entra com as credenciais definidas no servidor.
-        </p>
+        {!ehConsultor && import.meta.env.DEV && (
+          <p className="mt-4 text-center text-xs text-slate-400">
+            Os atalhos de demonstração usam a palavra-passe <code>demo1234</code>. O super
+            administrador entra com as credenciais definidas no servidor.
+          </p>
+        )}
       </div>
     </div>
   );

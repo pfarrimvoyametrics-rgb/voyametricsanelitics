@@ -1,12 +1,13 @@
 /**
- * analiseRoutes.js — Análise de tickets por IA (Claude).
+ * analiseRoutes.js — Análise de tickets por IA (Claude). SÓ super_admin
+ * (ferramenta de consultoria; a empresa cliente não lhe acede).
  */
 const express = require('express');
 const {
   analisarVolumeEquipas,
   analisarVolumeEquipasStream,
 } = require('../services/analiseIaService');
-const { exigirAutenticacao, exigirAdmin, resolverOrg } = require('../middleware/auth');
+const { exigirAutenticacao, exigirSuperAdmin, resolverOrg } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ const router = express.Router();
  *   { desde?: ISO, ate?: ISO, status?: 'pendente'|'em_andamento'|'resolvido', pergunta?: string }
  * Devolve: { analise, modelo, uso }
  */
-router.post('/volume-equipas', exigirAutenticacao, exigirAdmin, resolverOrg, async (req, res) => {
+router.post('/volume-equipas', exigirAutenticacao, exigirSuperAdmin, resolverOrg, async (req, res) => {
   try {
     const { desde, ate, status, pergunta } = req.body || {};
     const resultado = await analisarVolumeEquipas({ desde, ate, status, pergunta, orgId: req.orgId });
@@ -33,7 +34,7 @@ router.post('/volume-equipas', exigirAutenticacao, exigirAdmin, resolverOrg, asy
  * Eventos: `status` (a consultar dados), `delta` (fragmento de texto),
  *          `fim` (metadados finais), `erro`.
  */
-router.post('/volume-equipas/stream', exigirAutenticacao, exigirAdmin, resolverOrg, async (req, res) => {
+router.post('/volume-equipas/stream', exigirAutenticacao, exigirSuperAdmin, resolverOrg, async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');

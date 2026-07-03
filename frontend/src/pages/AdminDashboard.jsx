@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import TicketCard from '../components/TicketCard';
 import TicketDetail from '../components/TicketDetail';
 import AlertasSla from '../components/AlertasSla';
-import AnaliseIA from '../components/AnaliseIA';
 
 const ROTULO_CATEGORIA = {
   suporte_tecnico: 'Suporte Técnico',
@@ -153,9 +152,6 @@ export default function AdminDashboard({ socketRef, ligado }) {
           </table>
         </div>
       </section>
-
-      {/* Análise por IA (volume por equipa) */}
-      <AnaliseIA />
 
       {/* Tickets por tratar, com filtro por categoria (resolvidos contam nos KPIs) */}
       <section className="mt-6">

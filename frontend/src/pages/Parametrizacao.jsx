@@ -2,11 +2,13 @@ import { useState } from 'react';
 import GestaoUtilizadores from '../components/GestaoUtilizadores';
 import RegrasTriagem from '../components/RegrasTriagem';
 import ConfigSla from '../components/ConfigSla';
+import Canais from './Canais';
 
 const SUBTABS = [
   { chave: 'utilizadores', rotulo: 'Utilizadores' },
   { chave: 'triagem', rotulo: 'Regras de triagem' },
   { chave: 'sla', rotulo: 'SLA' },
+  { chave: 'canais', rotulo: 'Canais' },
 ];
 
 /**
@@ -37,7 +39,10 @@ export default function Parametrizacao() {
         ))}
       </div>
 
-      {sub === 'utilizadores' ? <GestaoUtilizadores /> : sub === 'triagem' ? <RegrasTriagem /> : <ConfigSla />}
+      {sub === 'utilizadores' ? <GestaoUtilizadores />
+        : sub === 'triagem' ? <RegrasTriagem />
+        : sub === 'sla' ? <ConfigSla />
+        : <Canais />}
     </main>
   );
 }
