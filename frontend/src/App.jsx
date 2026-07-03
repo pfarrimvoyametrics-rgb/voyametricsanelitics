@@ -1,182 +1,53 @@
-import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from './context/AuthContext';
 import { useSocket } from './hooks/useSocket';
-import { ehAdmin, ehSuperAdmin } from './utils/papeis';
-import { api, lerOrgAtiva, definirOrgAtiva } from './api/client';
+import { ehSuperAdmin, ehAdmin } from './utils/papeis';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Queue from './pages/Queue';
-import AdminDashboard from './pages/AdminDashboard';
-import Parametrizacao from './pages/Parametrizacao';
-import Organizacoes from './pages/Organizacoes';
-import Relatorios from './pages/Relatorios';
-import Canais from './pages/Canais';
 import CsatPublic from './pages/CsatPublic';
+import PortalConsultor from './pages/PortalConsultor';
+import PortalEmpresa from './pages/PortalEmpresa';
 
+/**
+ * App — encaminhamento por URL e por papel.
+ *  - `?csat=<id>`  -> inquérito público (sem login).
+ *  - `/consultor`  -> página de login do consultor (super admin).
+ *  - `/`           -> página de login da empresa cliente.
+ * Depois de autenticar, cada papel cai no seu portal próprio:
+ *  super_admin -> PortalConsultor · admin -> PortalEmpresa · operador -> fila.
+ */
 export default function App() {
   const { utilizador, aCarregar } = useAuth();
   const { socket, ligado } = useSocket();
 
-  const [vista, setVista] = useState('painel'); // painel | parametrizacao | organizacoes
-  const [orgs, setOrgs] = useState([]);
-  const [orgAtivaId, setOrgAtivaId] = useState(lerOrgAtiva() || '');
-
-  const superAdmin = utilizador && ehSuperAdmin(utilizador.funcao);
-
-  // Super admin: carregar a lista de organizações (para o seletor e a gestão).
-  const carregarOrgs = useCallback(async () => {
-    const lista = await api.listarOrganizacoes();
-    setOrgs(lista);
-    // Se não há organização escolhida, escolhe a primeira ativa.
-    setOrgAtivaId((atual) => {
-      if (atual && lista.some((o) => o.id === atual && o.ativo)) return atual;
-      const primeira = lista.find((o) => o.ativo);
-      const id = primeira ? primeira.id : '';
-      definirOrgAtiva(id);
-      return id;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (superAdmin) carregarOrgs().catch(() => {});
-  }, [superAdmin, carregarOrgs]);
-
-  const selecionarOrg = useCallback((id) => {
-    definirOrgAtiva(id);
-    setOrgAtivaId(id);
-  }, []);
-
-  // Super admin a observar uma organização: entra na sala dela (tempo real).
-  useEffect(() => {
-    if (superAdmin && orgAtivaId && ligado && socket.current) {
-      socket.current.emit('org:entrar', { orgId: orgAtivaId });
-    }
-  }, [superAdmin, orgAtivaId, ligado, socket]);
-
-  // Link público de inquérito de satisfação: ?csat=<id-do-ticket> (sem login).
+  // Inquérito público de satisfação: ?csat=<id-do-ticket> (sem login).
   const csatId = new URLSearchParams(window.location.search).get('csat');
   if (csatId) return <CsatPublic id={csatId} />;
+
+  // Duas entradas de login distintas por URL.
+  const ehEntradaConsultor = window.location.pathname.startsWith('/consultor');
 
   if (aCarregar) {
     return <div className="grid min-h-full place-items-center text-slate-400">A iniciar…</div>;
   }
-  if (!utilizador) return <Login />;
 
-  // --- Admin de organização / operador: fluxo direto (org do token) ---------
-  if (!superAdmin) {
-    const adminOrg = ehAdmin(utilizador.funcao);
-    return (
-      <div className="min-h-full">
-        <Navbar ligado={ligado} />
-
-        {adminOrg && (
-          <nav className="border-b border-slate-200 bg-white">
-            <div className="mx-auto flex max-w-7xl gap-1 px-5">
-              {[
-                { chave: 'painel', rotulo: 'Painel' },
-                { chave: 'relatorios', rotulo: 'Relatórios' },
-                { chave: 'canais', rotulo: 'Canais' },
-                { chave: 'parametrizacao', rotulo: 'Parametrização' },
-              ].map((t) => (
-                <button
-                  key={t.chave}
-                  onClick={() => setVista(t.chave)}
-                  className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition ${
-                    vista === t.chave
-                      ? 'border-indigo-600 text-indigo-600'
-                      : 'border-transparent text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  {t.rotulo}
-                </button>
-              ))}
-            </div>
-          </nav>
-        )}
-
-        {adminOrg && vista === 'parametrizacao' ? (
-          <Parametrizacao />
-        ) : adminOrg && vista === 'relatorios' ? (
-          <Relatorios />
-        ) : adminOrg && vista === 'canais' ? (
-          <Canais />
-        ) : adminOrg ? (
-          <AdminDashboard socketRef={socket} ligado={ligado} />
-        ) : (
-          <Queue socketRef={socket} ligado={ligado} />
-        )}
-      </div>
-    );
+  if (!utilizador) {
+    return <Login variante={ehEntradaConsultor ? 'consultor' : 'empresa'} />;
   }
 
-  // --- Super admin: seletor de organização + separadores --------------------
-  const orgsAtivas = orgs.filter((o) => o.ativo);
-  const semOrg = !orgAtivaId;
+  // --- Portais por papel (cada um limpo e separado) --------------------------
+  if (ehSuperAdmin(utilizador.funcao)) {
+    return <PortalConsultor socket={socket} ligado={ligado} />;
+  }
+  if (ehAdmin(utilizador.funcao)) {
+    return <PortalEmpresa socket={socket} ligado={ligado} />;
+  }
 
+  // Colaborador (operador): apenas a sua fila.
   return (
     <div className="min-h-full">
       <Navbar ligado={ligado} />
-
-      <nav className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5">
-          <div className="flex gap-1">
-            {[
-              { chave: 'painel', rotulo: 'Painel' },
-              { chave: 'relatorios', rotulo: 'Relatórios' },
-              { chave: 'canais', rotulo: 'Canais' },
-              { chave: 'parametrizacao', rotulo: 'Parametrização' },
-              { chave: 'organizacoes', rotulo: 'Organizações' },
-            ].map((t) => (
-              <button
-                key={t.chave}
-                onClick={() => setVista(t.chave)}
-                className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition ${
-                  vista === t.chave
-                    ? 'border-indigo-600 text-indigo-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                {t.rotulo}
-              </button>
-            ))}
-          </div>
-
-          {vista !== 'organizacoes' && (
-            <label className="flex items-center gap-2 py-2 text-sm text-slate-500">
-              Cliente:
-              <select
-                value={orgAtivaId}
-                onChange={(e) => selecionarOrg(e.target.value)}
-                className="rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-700 focus:border-indigo-500 focus:outline-none"
-              >
-                {!orgAtivaId && <option value="">— escolher —</option>}
-                {orgsAtivas.map((o) => (
-                  <option key={o.id} value={o.id}>{o.nome}</option>
-                ))}
-              </select>
-            </label>
-          )}
-        </div>
-      </nav>
-
-      {vista === 'organizacoes' ? (
-        <Organizacoes orgs={orgs} orgAtivaId={orgAtivaId} aoSelecionar={selecionarOrg} aoRecarregar={carregarOrgs} />
-      ) : semOrg ? (
-        <div className="mx-auto max-w-7xl px-5 py-16 text-center text-slate-500">
-          <p className="text-sm">Escolha uma organização (cliente) para ver o painel.</p>
-          <button onClick={() => setVista('organizacoes')} className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
-            Gerir organizações
-          </button>
-        </div>
-      ) : vista === 'parametrizacao' ? (
-        <Parametrizacao key={orgAtivaId} />
-      ) : vista === 'relatorios' ? (
-        <Relatorios key={orgAtivaId} />
-      ) : vista === 'canais' ? (
-        <Canais key={orgAtivaId} />
-      ) : (
-        <AdminDashboard key={orgAtivaId} socketRef={socket} ligado={ligado} />
-      )}
+      <Queue socketRef={socket} ligado={ligado} />
     </div>
   );
 }
