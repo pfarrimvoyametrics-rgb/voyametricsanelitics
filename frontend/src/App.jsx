@@ -9,6 +9,9 @@ import Queue from './pages/Queue';
 import AdminDashboard from './pages/AdminDashboard';
 import Parametrizacao from './pages/Parametrizacao';
 import Organizacoes from './pages/Organizacoes';
+import Relatorios from './pages/Relatorios';
+import Canais from './pages/Canais';
+import CsatPublic from './pages/CsatPublic';
 
 export default function App() {
   const { utilizador, aCarregar } = useAuth();
@@ -50,6 +53,10 @@ export default function App() {
     }
   }, [superAdmin, orgAtivaId, ligado, socket]);
 
+  // Link público de inquérito de satisfação: ?csat=<id-do-ticket> (sem login).
+  const csatId = new URLSearchParams(window.location.search).get('csat');
+  if (csatId) return <CsatPublic id={csatId} />;
+
   if (aCarregar) {
     return <div className="grid min-h-full place-items-center text-slate-400">A iniciar…</div>;
   }
@@ -67,6 +74,8 @@ export default function App() {
             <div className="mx-auto flex max-w-7xl gap-1 px-5">
               {[
                 { chave: 'painel', rotulo: 'Painel' },
+                { chave: 'relatorios', rotulo: 'Relatórios' },
+                { chave: 'canais', rotulo: 'Canais' },
                 { chave: 'parametrizacao', rotulo: 'Parametrização' },
               ].map((t) => (
                 <button
@@ -87,6 +96,10 @@ export default function App() {
 
         {adminOrg && vista === 'parametrizacao' ? (
           <Parametrizacao />
+        ) : adminOrg && vista === 'relatorios' ? (
+          <Relatorios />
+        ) : adminOrg && vista === 'canais' ? (
+          <Canais />
         ) : adminOrg ? (
           <AdminDashboard socketRef={socket} ligado={ligado} />
         ) : (
@@ -109,6 +122,8 @@ export default function App() {
           <div className="flex gap-1">
             {[
               { chave: 'painel', rotulo: 'Painel' },
+              { chave: 'relatorios', rotulo: 'Relatórios' },
+              { chave: 'canais', rotulo: 'Canais' },
               { chave: 'parametrizacao', rotulo: 'Parametrização' },
               { chave: 'organizacoes', rotulo: 'Organizações' },
             ].map((t) => (
@@ -155,6 +170,10 @@ export default function App() {
         </div>
       ) : vista === 'parametrizacao' ? (
         <Parametrizacao key={orgAtivaId} />
+      ) : vista === 'relatorios' ? (
+        <Relatorios key={orgAtivaId} />
+      ) : vista === 'canais' ? (
+        <Canais key={orgAtivaId} />
       ) : (
         <AdminDashboard key={orgAtivaId} socketRef={socket} ligado={ligado} />
       )}

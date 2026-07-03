@@ -45,6 +45,38 @@ async function pedir(caminho, opcoes = {}) {
   return dados;
 }
 
+/**
+ * Descarrega um ficheiro binário (ex.: PDF) autenticado e dispara a gravação no
+ * browser. Usa os mesmos cabeçalhos (token + org) que `pedir`, mas trata a
+ * resposta como blob em vez de JSON.
+ */
+async function baixarFicheiro(caminho, nomePadrao) {
+  const token = lerToken();
+  const orgAtiva = lerOrgAtiva();
+  const resp = await fetch(`/api${caminho}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(orgAtiva ? { 'x-org-id': orgAtiva } : {}),
+    },
+  });
+  if (!resp.ok) {
+    const dados = await resp.json().catch(() => ({}));
+    throw new Error(dados.erro || `Erro ${resp.status}`);
+  }
+  const blob = await resp.blob();
+  const cd = resp.headers.get('Content-Disposition') || '';
+  const m = /filename="?([^"]+)"?/.exec(cd);
+  const nome = m ? m[1] : nomePadrao;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nome;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
   login: (email, senha) =>
     pedir('/auth/login', { method: 'POST', body: JSON.stringify({ email, senha }) }),
@@ -83,6 +115,30 @@ export const api = {
   criarOrganizacao: (dados) => pedir('/organizacoes', { method: 'POST', body: JSON.stringify(dados) }),
   definirAtivoOrganizacao: (id, ativo) =>
     pedir(`/organizacoes/${id}/ativo`, { method: 'PATCH', body: JSON.stringify({ ativo }) }),
+  atualizarEmailDominiosOrganizacao: (id, email_dominios) =>
+    pedir(`/organizacoes/${id}/email-dominios`, { method: 'PATCH', body: JSON.stringify({ email_dominios }) }),
+  // Canais — alvo de SLA por categoria (admin):
+  canais: () => pedir('/canais'),
+  atualizarCanal: (categoria, slaMinutos) =>
+    pedir(`/canais/${categoria}`, { method: 'PUT', body: JSON.stringify({ slaMinutos }) }),
+  // Relatórios analíticos (admin). `usuarios` alimenta o filtro por operador.
+  usuarios: () => pedir('/usuarios'),
+  relatorios: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return pedir(`/relatorios${q ? `?${q}` : ''}`);
+  },
+  baixarRelatorioPdf: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return baixarFicheiro(`/relatorios/pdf${q ? `?${q}` : ''}`, 'relatorio.pdf');
+  },
+  baixarLiderancaPdf: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return baixarFicheiro(`/relatorios/lideranca/pdf${q ? `?${q}` : ''}`, 'balanco-lideranca.pdf');
+  },
+  // CSAT — inquérito público (link enviado ao cliente):
+  csatObter: (id) => pedir(`/csat/${id}`),
+  csatEnviar: (id, nota, comentario) =>
+    pedir(`/csat/${id}`, { method: 'POST', body: JSON.stringify({ nota, comentario }) }),
   // Apenas em desenvolvimento:
   mockTicket: () => pedir('/dev/mock-ticket', { method: 'POST', body: '{}' }),
 };

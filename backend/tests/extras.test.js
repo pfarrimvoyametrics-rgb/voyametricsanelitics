@@ -12,7 +12,7 @@ process.env.SLA_MINUTOS_UTEIS = '120';
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { calcularSlaLimite } = require('../src/services/slaService');
+const { calcularSlaLimite, minutosUteisEntre } = require('../src/services/slaService');
 const { normalizar } = require('../src/services/triageService');
 
 function fmt(d) {
@@ -53,4 +53,25 @@ test('normalizar é seguro com entradas vazias/nulas', () => {
 test('normalizar permite casar "fatura" dentro do texto', () => {
   const corpo = normalizar('Boa tarde, segue a minha FATURA em anexo.');
   assert.ok(corpo.includes('fatura'));
+});
+
+// --- Minutos úteis entre dois instantes (métricas de resolução) --------------
+
+test('minutosUteisEntre: mesmo dia útil (Seg 10:00 -> 11:30 = 90 min)', () => {
+  const a = new Date(2025, 5, 2, 10, 0); // Segunda
+  const b = new Date(2025, 5, 2, 11, 30);
+  assert.strictEqual(minutosUteisEntre(a, b), 90);
+});
+
+test('minutosUteisEntre: ignora fora-da-janela e fim-de-semana (Sex 18:30 -> Seg 10:00 = 60 min)', () => {
+  // Sex 18:30->19:00 = 30 min; Sáb/Dom não contam; Seg 09:30->10:00 = 30 min.
+  const a = new Date(2025, 5, 6, 18, 30); // Sexta
+  const b = new Date(2025, 5, 9, 10, 0);  // Segunda
+  assert.strictEqual(minutosUteisEntre(a, b), 60);
+});
+
+test('minutosUteisEntre: fim <= início devolve 0', () => {
+  const a = new Date(2025, 5, 2, 12, 0);
+  assert.strictEqual(minutosUteisEntre(a, a), 0);
+  assert.strictEqual(minutosUteisEntre(a, new Date(2025, 5, 2, 11, 0)), 0);
 });

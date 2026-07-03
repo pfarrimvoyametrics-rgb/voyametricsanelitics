@@ -1,9 +1,11 @@
 /**
- * auth.js — Autenticação por JWT.
+ * auth.js — Autenticação por JWT e autorização.
  *
- * Login é simplificado conforme pedido ("simples, para o funcionário entrar
- * com o seu perfil"): valida-se o email contra a tabela `usuarios` e emite-se
- * um JWT. Em produção, acrescentar palavra-passe/SSO (ver README › Segurança).
+ * O login valida email + palavra-passe (hash bcrypt — ver `routes/authRoutes.js`
+ * e `utils/password.js`) e emite um JWT que inclui a organização do utilizador.
+ * Aqui ficam a emissão/verificação do token, os middlewares de autorização
+ * (`exigirAutenticacao`, `exigirAdmin`, `exigirSuperAdmin`) e a resolução da
+ * organização-alvo do pedido (`resolverOrg`, barreira anti-cross-tenant).
  */
 const jwt = require('jsonwebtoken');
 const { env } = require('../config/env');
