@@ -262,5 +262,5 @@ SLA, carga por operador, e detecção de bloqueios expirados.
 
 ```bash
 cd backend
-TZ=Europe/Lisbon npm test     # 7 testes do cálculo de SLA
+TZ=Europe/Lisbon npm test     # 12 testes: cálculo de SLA + normalização da triagem
 ```
