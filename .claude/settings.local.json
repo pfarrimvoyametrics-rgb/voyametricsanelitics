@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test *)",
+      "Bash(npm run *)",
+      "mcp__mcp-registry__search_mcp_registry",
+      "mcp__mcp-registry__list_connectors",
+      "PowerShell(Start-Process \"ms-settings:defaultapps\")",
+      "PowerShell(node \"C:\\\\Users\\\\OSIRIS~2\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-OSIRIS-PedroFarrim-OneDrive---Osiris---Viagens-e-Turismo--LDA-Ambiente-de-Trabalho-ticket-system\\\\33ad68c5-1a0b-41c1-9ea3-406c32b4e059\\\\scratchpad\\\\seed_demo.js\")",
+      "mcp__Claude_Preview__preview_start",
+      "PowerShell(npm install --prefix \"C:\\\\Users\\\\OSIRIS-PedroFarrim\\\\Claude\\\\Projects\\\\NEW DASHBOARD\\\\voyametrics-desktop\" 2>&1)",
+      "PowerShell(npm start --prefix \"C:\\\\Users\\\\OSIRIS-PedroFarrim\\\\Claude\\\\Projects\\\\NEW DASHBOARD\\\\voyametrics-desktop\")",
+      "PowerShell(Get-Process electron -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(\"electron parados\")",
+      "PowerShell(\"ok\")",
+      "PowerShell(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(48\\).toString\\('base64url'\\)\\)\")",
+      "PowerShell(node \"C:\\\\Users\\\\OSIRIS~2\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-OSIRIS-PedroFarrim-OneDrive---Osiris---Viagens-e-Turismo--LDA-Ambiente-de-Trabalho-ticket-system\\\\33ad68c5-1a0b-41c1-9ea3-406c32b4e059\\\\scratchpad\\\\read_xlsx.js\")",
+      "PowerShell(node \"C:\\\\Users\\\\OSIRIS~2\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-OSIRIS-PedroFarrim-OneDrive---Osiris---Viagens-e-Turismo--LDA-Ambiente-de-Trabalho-ticket-system\\\\33ad68c5-1a0b-41c1-9ea3-406c32b4e059\\\\scratchpad\\\\inspect2.js\")",
+      "PowerShell(node \"C:\\\\Users\\\\OSIRIS~2\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-OSIRIS-PedroFarrim-OneDrive---Osiris---Viagens-e-Turismo--LDA-Ambiente-de-Trabalho-ticket-system\\\\33ad68c5-1a0b-41c1-9ea3-406c32b4e059\\\\scratchpad\\\\test_all.js\")",
+      "PowerShell(node \"C:\\\\Users\\\\OSIRIS~2\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-OSIRIS-PedroFarrim-OneDrive---Osiris---Viagens-e-Turismo--LDA-Ambiente-de-Trabalho-ticket-system\\\\33ad68c5-1a0b-41c1-9ea3-406c32b4e059\\\\scratchpad\\\\seed_real.js\")"
+    ]
+  }
+}

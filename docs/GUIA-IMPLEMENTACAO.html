@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VoyaMetrics — Medidor SLA Email · Guia de Implementação</title>
+<style>
+  :root{
+    --navy:#0b2545; --ink:#1e293b; --slate:#475569; --mute:#64748b; --line:#e2e8f0;
+    --indigo:#0b2545; --teal:#14c8b8; --indigo-50:#eef2f7; --emerald:#059669; --emerald-50:#ecfdf5;
+    --amber:#b45309; --amber-50:#fffbeb; --rose:#e11d48; --bg:#f8fafc; --code:#0b1220;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:900px;margin:0 auto;padding:0 20px 80px}
+  header.cover{background:var(--navy);color:#fff;border-top:6px solid var(--teal);margin-bottom:28px}
+  .cover .inner{max-width:900px;margin:0 auto;padding:40px 20px}
+  .cover .mark{font-size:24px;font-weight:800}
+  .cover .sub{color:#94a3b8;font-size:13px;margin-top:2px}
+  .cover h1{font-size:32px;margin:26px 0 6px;font-weight:800}
+  .cover p{color:#cbd5e1;margin:0;font-size:15px}
+  h2{font-size:21px;margin:34px 0 6px;padding-top:10px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:20px 0 6px}
+  p{margin:8px 0}
+  a{color:var(--indigo)}
+  code{background:#eef2f7;color:#0b2545;padding:1px 6px;border-radius:5px;font-family:ui-monospace,"Cascadia Code",Consolas,monospace;font-size:13px}
+  pre{background:var(--code);color:#e2e8f0;border-radius:10px;padding:14px 16px;overflow:auto;font-size:13px;line-height:1.55;
+    font-family:ui-monospace,"Cascadia Code",Consolas,monospace}
+  pre .c{color:#94a3b8}
+  .toc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:10px}
+  .toc h3{margin:0 0 8px}
+  .toc ol{margin:0;padding-left:20px}
+  .toc a{text-decoration:none}
+  .step{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--indigo);color:#fff;font-size:13px;font-weight:700;margin-right:8px;vertical-align:2px}
+  .nota{border-left:4px solid var(--indigo);background:#fff;border-radius:0 10px 10px 0;padding:10px 14px;margin:12px 0}
+  .aviso{border-left:4px solid var(--amber);background:var(--amber-50);border-radius:0 10px 10px 0;padding:10px 14px;margin:12px 0}
+  .ok{border-left:4px solid var(--emerald);background:var(--emerald-50);border-radius:0 10px 10px 0;padding:10px 14px;margin:12px 0}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th{background:var(--indigo-50);color:#0b2545;text-align:left;padding:8px 10px;font-size:13px}
+  td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:top}
+  .pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px}
+  .post{background:#dcfce7;color:#166534}.get{background:#dbeafe;color:#1e40af}
+  footer{color:var(--mute);font-size:12px;text-align:center;margin-top:40px}
+  ul li{margin:4px 0}
+</style>
+</head>
+<body>
+<header class="cover">
+  <div class="inner">
+    <div class="mark" style="display:flex;align-items:center;gap:10px">
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <rect x="7" y="18" width="3.6" height="7" rx="1" fill="#ffffff"/>
+        <rect x="13.5" y="13.5" width="3.6" height="11.5" rx="1" fill="#ffffff"/>
+        <rect x="20" y="9" width="3.6" height="16" rx="1" fill="#ffffff"/>
+        <path d="M5.5 23.5 C 12 8.5, 21 5.5, 27.5 9.5" fill="none" stroke="#14C8B8" stroke-width="2.4" stroke-linecap="round"/>
+        <circle cx="27.5" cy="9.5" r="2.3" fill="#14C8B8"/>
+      </svg>
+      VoyaMetrics
+    </div>
+    <div class="sub">Medidor SLA Email · Departamento Corporate</div>
+    <h1>Medidor SLA Email — Guia de Implementação</h1>
+    <p>Passo a passo: ambiente de teste, base de dados, ligação ao Outlook, produção e integração com sistema externo de vendas.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="toc">
+    <h3>Índice</h3>
+    <ol>
+      <li><a href="#req">Pré-requisitos</a></li>
+      <li><a href="#bd">Passo 1 — Base de dados</a></li>
+      <li><a href="#backend">Passo 2 — Backend (API)</a></li>
+      <li><a href="#frontend">Passo 3 — Frontend</a></li>
+      <li><a href="#testar">Passo 4 — Entrar e testar</a></li>
+      <li><a href="#outlook">Passo 5 — Ligar o Outlook (Microsoft 365)</a></li>
+      <li><a href="#externo">Passo 6 — Integração com sistema externo (vendas)</a></li>
+      <li><a href="#producao">Passo 7 — Produção</a></li>
+      <li><a href="#problemas">Resolução de problemas</a></li>
+    </ol>
+  </div>
+
+  <div class="nota">As instruções de terminal são para <b>Windows / PowerShell</b>. A pasta do projecto tem espaços, por isso as aspas importam. Os dois servidores (backend e frontend) ficam a correr — fecha cada um com <code>Ctrl + C</code>.</div>
+
+  <h2 id="req">Pré-requisitos</h2>
+  <p>Precisas de duas ferramentas instaladas. Confirma as versões no PowerShell:</p>
+  <pre><span class="c"># Node.js 18 ou superior</span>
+node -v
+<span class="c"># Docker Desktop (para a base de dados PostgreSQL)</span>
+docker -v</pre>
+  <p>Se algum não der versão: <a href="https://nodejs.org">Node.js</a> e <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a>. Sem Docker, dá para usar um PostgreSQL instalado localmente (ver nota no Passo 2).</p>
+
+  <h2 id="bd"><span class="step">1</span>Base de dados</h2>
+  <p>Numa janela do PowerShell, arranca o PostgreSQL (já no fuso de Lisboa):</p>
+  <pre>cd "&lt;PASTA-DO-PROJECTO&gt;\ticket-system"   <span class="c"># o caminho onde colocou o projecto</span>
+docker compose up -d</pre>
+  <div class="ok">Fica a correr em segundo plano. Para parar mais tarde: <code>docker compose down</code> (os dados mantêm-se).</div>
+
+  <h2 id="backend"><span class="step">2</span>Backend (API)</h2>
+  <p>Na mesma janela:</p>
+  <pre>cd backend
+copy .env.example .env       <span class="c"># deixa os MS_* vazios = modo de teste, sem Outlook</span>
+npm install
+npm run db:reset             <span class="c"># cria tabelas (migrações 001 a 004) + utilizadores</span>
+npm run demo                 <span class="c"># gera ~400 tickets de demonstração (ou: npm run demo 800)</span>
+npm run dev                  <span class="c"># API em http://localhost:4000</span></pre>
+  <div class="nota"><b>O que cada comando faz:</b> <code>db:reset</code> aplica todas as migrações (incluindo vendas, métricas de tempo e agrupamento de conversas) e cria os perfis de demonstração; <code>demo</code> enche a base com tickets realistas para os relatórios terem dados.</div>
+  <div class="aviso"><b>Sem Docker?</b> Cria uma base de dados PostgreSQL local, mete a ligação em <code>DATABASE_URL</code> no <code>backend\.env</code> e corre <code>npm run db:reset</code>. O resto é igual.</div>
+
+  <h2 id="frontend"><span class="step">3</span>Frontend</h2>
+  <p>Abre uma <b>segunda</b> janela do PowerShell:</p>
+  <pre>cd "&lt;PASTA-DO-PROJECTO&gt;\ticket-system\frontend"
+npm install
+npm run dev                  <span class="c"># interface em http://localhost:5173</span></pre>
+
+  <h2 id="testar"><span class="step">4</span>Entrar e testar</h2>
+  <p>Abre <a href="http://localhost:5173">http://localhost:5173</a> e usa os botões de entrada rápida:</p>
+  <table>
+    <tr><th>Perfil</th><th>O que testar</th></tr>
+    <tr><td><code>admin@empresa.pt</code><br>Administrador</td><td>Painel do supervisor; separador <b>Relatórios</b> (períodos, âmbito por cliente/operador/equipa, exportar <b>Excel</b> e <b>PDF</b>).</td></tr>
+    <tr><td><code>carlos.fatura@empresa.pt</code><br>Operador · Faturação</td><td>Fila, <b>Assumir</b>, abrir o detalhe, responder e <b>Resolver</b>.</td></tr>
+    <tr><td><code>ines.comercial@empresa.pt</code><br>Operador · Comercial</td><td>Resolver um ticket Comercial: é <b>obrigatório</b> marcar <b>Ganhou/Perdeu</b> e o valor — alimenta a conversão.</td></tr>
+  </table>
+  <p>Na fila do operador há o botão <b>"+ Ticket de teste"</b> (só em desenvolvimento) para injectar tickets ao vivo e ver os cronómetros e alertas de SLA. Para limpar os dados de demonstração: <code>npm run demo:clear</code> (na pasta <code>backend</code>).</p>
+  <div class="ok"><b>Checklist rápido:</b> login (admin e operador) · fila em tempo real (abrir 2 separadores) · assumir/resolver · alertas de SLA · Relatórios com filtros · exportar Excel e PDF.</div>
+
+  <h2 id="outlook"><span class="step">5</span>Ligar o Outlook (Microsoft 365)</h2>
+  <p>Para captar emails reais da caixa partilhada (em vez dos tickets de teste), preenche os <code>MS_*</code> no <code>backend\.env</code>. O passo a passo detalhado (registo no Azure AD, permissões, Application Access Policy, túnel para desenvolvimento) está em <code>docs/INTEGRACAO-GRAPH.md</code>. Resumo:</p>
+  <ul>
+    <li>Registar a aplicação no <b>Microsoft Entra ID (Azure AD)</b> e copiar <code>MS_TENANT_ID</code>, <code>MS_CLIENT_ID</code>, <code>MS_CLIENT_SECRET</code>.</li>
+    <li>Permissões de <b>aplicação</b> com consentimento de admin: <code>Mail.Read</code>, <code>Mail.Send</code>.</li>
+    <li>Restringir a app à caixa certa com uma <b>Application Access Policy</b>.</li>
+    <li>Definir <code>MS_SHARED_MAILBOX</code> e <code>MS_WEBHOOK_URL</code> (URL pública HTTPS; em dev usar um túnel como o ngrok).</li>
+  </ul>
+  <div class="nota">A associação dos emails ao ticket usa o identificador interno da mensagem e o <code>conversationId</code> da conversa — <b>não depende do assunto</b>. Respostas do cliente à mesma conversa juntam-se ao ticket aberto; uma resposta a um ticket já resolvido abre um ticket novo.</div>
+
+  <h2 id="externo"><span class="step">6</span>Integração com sistema externo (vendas)</h2>
+  <p>Hoje o operador marca a venda à mão ao resolver. Para preencher o <b>valor da venda automaticamente</b> a partir do vosso sistema de reservas/faturação, a app expõe um endpoint seguro. Quando uma reserva é confirmada/faturada, o sistema externo chama este endpoint e o ticket fica com o resultado e o valor — e os relatórios actualizam-se sozinhos.</p>
+
+  <h3>6.1 Activar a integração</h3>
+  <p>Gera uma chave forte e coloca-a no <code>backend\.env</code>. Enquanto estiver vazia, o endpoint está <b>desactivado</b>.</p>
+  <pre><span class="c"># gerar uma chave aleatória (exemplo)</span>
+openssl rand -hex 32
+<span class="c"># em backend\.env</span>
+INTEGRACAO_API_KEY=cole_aqui_a_chave_gerada</pre>
+  <div class="aviso">Trata a chave como uma palavra-passe: só no servidor e no sistema externo, nunca no frontend nem em repositórios públicos. Em produção, o endpoint deve ser sempre <b>HTTPS</b>.</div>
+
+  <h3>6.2 Registar a venda — <span class="pill post">POST</span> <code>/api/integracoes/venda</code></h3>
+  <p>Cabeçalhos: <code>Content-Type: application/json</code> e <code>x-api-key: {A_SUA_CHAVE}</code>.</p>
+  <p>No corpo, envia <b>uma</b> referência ao ticket + o resultado:</p>
+  <table>
+    <tr><th>Campo</th><th>Descrição</th></tr>
+    <tr><td><code>ticketId</code></td><td>Id do ticket (UUID). A referência mais fiável, se a guardarem na reserva.</td></tr>
+    <tr><td><code>conversationId</code></td><td>Id da conversa do Outlook (atualiza o ticket mais recente dessa conversa).</td></tr>
+    <tr><td><code>outlookMessageId</code></td><td>Id da mensagem original do email.</td></tr>
+    <tr><td><code>resultado</code></td><td><code>ganho</code> · <code>perdido</code> · <code>nao_aplicavel</code> (obrigatório).</td></tr>
+    <tr><td><code>valor</code></td><td>Valor da venda em euros (só conta quando <code>ganho</code>).</td></tr>
+  </table>
+  <p>Exemplo (PowerShell):</p>
+  <pre>curl.exe -X POST "https://tickets.suaempresa.pt/api/integracoes/venda" `
+  -H "Content-Type: application/json" `
+  -H "x-api-key: A_SUA_CHAVE" `
+  -d '{ "conversationId": "AAQkAGI2...", "resultado": "ganho", "valor": 1850.00 }'</pre>
+  <p>Resposta:</p>
+  <pre>{ "ok": true, "ticket": { "id": "8f3...", "resultado_venda": "ganho", "valor_venda": 1850.00 } }</pre>
+
+  <h3>6.3 Registar emissões — <span class="pill post">POST</span> <code>/api/integracoes/emissao</code></h3>
+  <p>Para medir a <b>precisão de emissão</b>, o sistema de reservas/emissão reporta quantos bilhetes/vouchers foram emitidos no ticket e quantos saíram com erro (obrigaram a reemissão). Mesmo cabeçalho <code>x-api-key</code>.</p>
+  <table>
+    <tr><th>Campo</th><th>Descrição</th></tr>
+    <tr><td><code>ticketId</code> / <code>conversationId</code> / <code>outlookMessageId</code></td><td>Uma referência ao ticket (igual ao endpoint de venda).</td></tr>
+    <tr><td><code>emitidos</code></td><td>Nº total de bilhetes/vouchers emitidos (inteiro ≥ 0, obrigatório).</td></tr>
+    <tr><td><code>comErro</code></td><td>Nº desses que saíram com erro (inteiro ≥ 0; é limitado automaticamente a ≤ <code>emitidos</code>).</td></tr>
+  </table>
+  <pre>curl.exe -X POST "https://tickets.suaempresa.pt/api/integracoes/emissao" `
+  -H "x-api-key: A_SUA_CHAVE" -H "Content-Type: application/json" `
+  -d '{ "conversationId": "AAQkAGI2...", "emitidos": 3, "comErro": 0 }'</pre>
+  <p>Resposta:</p>
+  <pre>{ "ok": true, "ticket": { "id": "8f3...", "bilhetes_emitidos": 3, "bilhetes_com_erro": 0 } }</pre>
+  <p>A <b>precisão de emissão</b> nos relatórios = 1 − (bilhetes com erro ÷ bilhetes emitidos), agregada por operador e por equipa.</p>
+
+  <h3>6.4 Consultar um ticket — <span class="pill get">GET</span> <code>/api/integracoes/ticket</code></h3>
+  <p>Para o sistema externo confirmar o alvo antes de gravar: <code>/api/integracoes/ticket?conversationId=AAQk...</code> (ou <code>?ticketId=...</code>), com o mesmo cabeçalho <code>x-api-key</code>.</p>
+
+  <h3>6.5 Como ligar os dois sistemas (recomendado)</h3>
+  <ul>
+    <li><b>Opção A (mais robusta):</b> quando uma oportunidade nasce de um ticket, guardem o <code>ticketId</code> (ou <code>conversationId</code>) na reserva do sistema externo. Ao fechar a reserva, chamam o endpoint com essa referência. Associação exacta, sem ambiguidade.</li>
+    <li><b>Opção B:</b> sem referência guardada, usem o <code>conversationId</code> (visível no Outlook) ou o email do cliente + período para localizar o ticket via <code>GET .../ticket</code> e depois gravar.</li>
+  </ul>
+  <table>
+    <tr><th>Código</th><th>Significado</th></tr>
+    <tr><td><code>200</code></td><td>Venda registada.</td></tr>
+    <tr><td><code>400</code></td><td>Falta referência ou <code>resultado</code> inválido.</td></tr>
+    <tr><td><code>401</code></td><td>Chave de API inválida ou em falta.</td></tr>
+    <tr><td><code>404</code></td><td>Não há ticket para a referência indicada.</td></tr>
+    <tr><td><code>503</code></td><td>Integração desactivada (<code>INTEGRACAO_API_KEY</code> não definida).</td></tr>
+  </table>
+  <div class="ok">A marcação manual pelo operador continua a funcionar. A integração apenas a complementa/automatiza — o último valor gravado prevalece.</div>
+
+  <h2 id="producao"><span class="step">7</span>Produção</h2>
+  <p>O checklist completo (pré-produção, Caddy+Docker, Azure App Service e smoke test) está em <code>docs/CHECKLIST-DEPLOY.md</code>. Pontos essenciais:</p>
+  <ul>
+    <li><code>NODE_ENV=production</code> e <code>JWT_SECRET</code> longo e aleatório (o arranque é bloqueado se for fraco).</li>
+    <li><code>TZ=Europe/Lisbon</code> no processo (o SLA depende disto).</li>
+    <li>HTTPS obrigatório e <b>WebSocket</b> activo no reverse-proxy (para o tempo real).</li>
+    <li>Aplicar migrações em produção (<code>npm run migrate</code>) e <b>não</b> correr <code>demo</code>.</li>
+    <li>Substituir os perfis de demonstração por utilizadores reais; idealmente SSO/Entra ID.</li>
+  </ul>
+
+  <h2 id="problemas">Resolução de problemas</h2>
+  <table>
+    <tr><th>Sintoma</th><th>Causa provável / solução</th></tr>
+    <tr><td>Backend não arranca, erro de base de dados</td><td>O PostgreSQL não está a correr (<code>docker compose up -d</code>) ou <code>DATABASE_URL</code> errado.</td></tr>
+    <tr><td>O arranque bloqueia por causa do <code>JWT_SECRET</code></td><td>Em produção o segredo tem de ter ≥32 caracteres e não ser o valor por omissão.</td></tr>
+    <tr><td>Relatórios vazios</td><td>Faltam dados — corre <code>npm run demo</code> (teste) ou aguarda emails reais.</td></tr>
+    <tr><td>Gráficos não aparecem</td><td>Sem ligação à Internet (Chart.js/SheetJS vêm de CDN). As tabelas continuam a funcionar.</td></tr>
+    <tr><td><code>/api/integracoes/venda</code> dá 503</td><td>Falta definir <code>INTEGRACAO_API_KEY</code> no servidor.</td></tr>
+    <tr><td>Não chegam emails ao ticket</td><td>Configuração do Graph incompleta — ver <code>docs/INTEGRACAO-GRAPH.md</code>.</td></tr>
+  </table>
+
+  <footer>VoyaMetrics — Medidor SLA Email · Guia de Implementação · Confidencial</footer>
+</div>
+</body>
+</html>

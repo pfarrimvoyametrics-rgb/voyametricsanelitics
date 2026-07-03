@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VoyaMetrics — Medidor SLA Email · Mockups (Supervisor &amp; Operador)</title>
+<style>
+  :root{
+    --indigo:#0b2545; --teal:#14c8b8; --indigo-50:#eef2f7; --indigo-100:#dbe3ec; --indigo-700:#081a33;
+    --slate-50:#f8fafc; --slate-100:#f1f5f9; --slate-200:#e2e8f0; --slate-300:#cbd5e1;
+    --slate-400:#94a3b8; --slate-500:#64748b; --slate-600:#475569; --slate-700:#334155; --slate-800:#1e293b;
+    --emerald-50:#ecfdf5; --emerald-500:#10b981; --emerald-600:#059669; --emerald-700:#047857;
+    --amber-50:#fffbeb; --amber-500:#f59e0b; --amber-600:#d97706; --amber-700:#b45309;
+    --rose-50:#fff1f2; --rose-500:#f43f5e; --rose-600:#e11d48; --rose-700:#be123c;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--slate-100);color:var(--slate-800);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .page{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
+  .doc-h1{font-size:22px;font-weight:700;margin:0 0 4px;}
+  .doc-sub{color:var(--slate-500);font-size:14px;margin:0 0 24px;}
+  .secao-rotulo{display:inline-block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--indigo);background:var(--indigo-50);padding:4px 10px;border-radius:6px;margin:28px 0 12px;}
+  .app{background:#fff;border:1px solid var(--slate-200);border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04);}
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--slate-200);}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .logo{width:36px;height:36px;border-radius:8px;background:var(--indigo);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .brand b{font-size:14px;font-weight:600;}
+  .brand small{display:block;color:var(--slate-500);font-size:12px;}
+  .nav-right{display:flex;align-items:center;gap:16px;}
+  .live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--slate-500);}
+  .dot{width:8px;height:8px;border-radius:50%;}
+  .av{width:30px;height:30px;border-radius:50%;background:var(--slate-800);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;}
+  .body{padding:18px;}
+  h2.title{font-size:18px;font-weight:600;margin:0 0 2px;}
+  p.subtitle{color:var(--slate-500);font-size:13px;margin:0 0 16px;}
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:18px;}
+  .kpi{background:var(--slate-50);border-radius:10px;padding:12px;}
+  .kpi .lab{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--slate-400);}
+  .kpi .val{font-size:26px;font-weight:700;margin-top:4px;}
+  .kpi .val small{font-size:15px;color:var(--slate-400);font-weight:600;}
+  .card{border:1px solid var(--slate-200);border-radius:12px;padding:14px 16px;background:#fff;margin-bottom:18px;}
+  .card h3{font-size:13px;font-weight:600;margin:0 0 10px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--slate-400);font-weight:600;padding:0 0 8px;}
+  td{padding:8px 0;border-top:1px solid var(--slate-100);}
+  .bar{height:8px;width:150px;background:var(--slate-100);border-radius:99px;overflow:hidden;}
+  .bar > span{display:block;height:100%;background:var(--indigo);border-radius:99px;}
+  .tabs{display:inline-flex;gap:4px;padding:4px;border:1px solid var(--slate-200);border-radius:8px;margin-bottom:12px;}
+  .tab{font-size:13px;padding:6px 12px;border-radius:6px;color:var(--slate-600);}
+  .tab.on{background:var(--indigo);color:#fff;font-weight:600;}
+  .tk{position:relative;display:flex;gap:14px;align-items:stretch;border:1px solid var(--slate-200);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#fff;}
+  .tk .edge{position:absolute;left:0;top:0;height:100%;width:5px;border-radius:12px 0 0 12px;}
+  .tk .main{flex:1;min-width:0;padding-left:6px;}
+  .pill{font-size:11px;font-weight:600;padding:1px 8px;border-radius:6px;}
+  .pill.cat{color:var(--slate-500);background:var(--slate-50);border:1px solid var(--slate-200);}
+  .pill.st-pend{color:var(--slate-600);background:var(--slate-100);}
+  .pill.st-and{color:var(--indigo-700);background:var(--indigo-100);}
+  .tk h4{font-size:15px;font-weight:600;margin:8px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tk .meta{font-size:13px;color:var(--slate-500);margin:0;}
+  .tk .who{font-size:12px;color:var(--slate-400);margin:4px 0 0;}
+  .side{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;}
+  .timer{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;padding:4px 8px;border-radius:8px;}
+  .t-red{background:var(--rose-50);color:var(--rose-700);}
+  .t-amber{background:var(--amber-50);color:var(--amber-700);}
+  .t-green{background:var(--emerald-50);color:var(--emerald-700);}
+  .btns{display:inline-flex;gap:6px;margin-top:10px;}
+  .btn{font-size:13px;font-weight:600;padding:6px 12px;border-radius:8px;border:0;cursor:default;}
+  .btn-primary{background:var(--indigo);color:#fff;}
+  .btn-ok{background:var(--emerald-600);color:#fff;}
+  .btn-ghost{background:#fff;color:var(--slate-600);border:1px solid var(--slate-300);}
+  .alert{border:2px solid var(--rose-500);background:var(--rose-50);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .alert .ic{width:34px;height:34px;border-radius:50%;background:var(--rose-600);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;}
+  .toast{width:300px;border:1px solid var(--amber-500);background:var(--amber-50);border-radius:12px;padding:10px 12px;margin-left:auto;}
+  .legend{font-size:12px;color:var(--slate-500);margin:10px 2px 0;}
+  .legend b{color:var(--slate-700);font-weight:600;}
+  .foot{color:var(--slate-400);font-size:12px;margin-top:28px;text-align:center;}
+  @media(max-width:720px){.kpis{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1 class="doc-h1">VoyaMetrics — Medidor SLA Email · Mockups de interface</h1>
+  <p class="doc-sub">Representação visual das duas vistas do sistema de gestão de SLA. Dados de exemplo.</p>
+
+  <!-- ===================== SUPERVISOR ===================== -->
+  <span class="secao-rotulo">Vista do supervisor (admin)</span>
+  <div class="app">
+    <div class="nav">
+      <div class="brand"><div class="logo"><svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="7" y="18" width="3.6" height="7" rx="1" fill="#ffffff"/><rect x="13.5" y="13.5" width="3.6" height="11.5" rx="1" fill="#ffffff"/><rect x="20" y="9" width="3.6" height="16" rx="1" fill="#ffffff"/><path d="M5.5 23.5 C 12 8.5, 21 5.5, 27.5 9.5" fill="none" stroke="#14C8B8" stroke-width="2.4" stroke-linecap="round"/><circle cx="27.5" cy="9.5" r="2.3" fill="#14C8B8"/></svg></div><div><b>VoyaMetrics</b><small>Medidor SLA Email</small></div></div>
+      <div class="nav-right">
+        <span class="live"><span class="dot" style="background:var(--emerald-500)"></span>Em direto</span>
+        <div style="display:flex;align-items:center;gap:8px;"><div class="av">AG</div><div style="text-align:right"><div style="font-size:13px;font-weight:600">Admin Geral</div><div style="font-size:11px;color:var(--slate-500)">Administrador</div></div></div>
+      </div>
+    </div>
+    <div class="body">
+      <h2 class="title">Painel do supervisor</h2>
+      <p class="subtitle">Visão global de todas as categorias, em direto.</p>
+
+      <div class="kpis">
+        <div class="kpi"><div class="lab">Cumprimento SLA</div><div class="val" style="color:var(--emerald-600)">96,2<small>%</small></div></div>
+        <div class="kpi"><div class="lab">Pendentes</div><div class="val">14</div></div>
+        <div class="kpi"><div class="lab">Em curso</div><div class="val" style="color:var(--indigo)">9</div></div>
+        <div class="kpi"><div class="lab">Resolvidos</div><div class="val" style="color:var(--emerald-600)">213</div></div>
+        <div class="kpi"><div class="lab">SLA violado</div><div class="val" style="color:var(--rose-600)">2</div></div>
+        <div class="kpi"><div class="lab">Total</div><div class="val">238</div></div>
+      </div>
+
+      <div class="card">
+        <h3>Carga por operador</h3>
+        <table>
+          <thead><tr><th>Operador</th><th>Categoria</th><th>Em curso</th><th>Resolvidos</th><th style="width:160px">Distribuição</th></tr></thead>
+          <tbody>
+            <tr><td style="font-weight:600">Sofia Marques</td><td style="color:var(--slate-500)">Suporte Técnico</td><td style="color:var(--indigo);font-weight:600">3</td><td style="color:var(--slate-500)">41</td><td><span class="bar"><span style="width:75%"></span></span></td></tr>
+            <tr><td style="font-weight:600">Carlos Nunes</td><td style="color:var(--slate-500)">Faturação</td><td style="color:var(--indigo);font-weight:600">2</td><td style="color:var(--slate-500)">38</td><td><span class="bar"><span style="width:50%"></span></span></td></tr>
+            <tr><td style="font-weight:600">Inês Carvalho</td><td style="color:var(--slate-500)">Comercial</td><td style="color:var(--indigo);font-weight:600">4</td><td style="color:var(--slate-500)">52</td><td><span class="bar"><span style="width:100%"></span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="font-size:13px;font-weight:600;margin:0 0 10px">Tickets por tratar</h3>
+      <div class="tabs"><span class="tab on">Todas</span><span class="tab">Suporte Técnico</span><span class="tab">Faturação</span><span class="tab">Comercial</span></div>
+
+      <div class="tk"><span class="edge" style="background:var(--rose-500)"></span>
+        <div class="main"><div><span class="pill cat">Faturação</span> <span class="pill st-and">em andamento</span></div>
+          <h4>Reembolso de reserva cancelada</h4><p class="meta">De <b style="color:var(--slate-700)">ana.sousa@cliente.pt</b> · recebido 20/06 16:48</p>
+          <p class="who">A tratar: <b style="color:var(--slate-600)">Carlos Nunes</b></p></div>
+        <div class="side"><span class="timer t-red"><span class="dot" style="background:var(--rose-600)"></span>+00:12:48</span>
+          <span class="btns"><span class="btn btn-ok">Resolver</span><span class="btn btn-ghost">Libertar</span></span></div>
+      </div>
+
+      <div class="tk"><span class="edge" style="background:var(--amber-500)"></span>
+        <div class="main"><div><span class="pill cat">Suporte Técnico</span> <span class="pill st-pend">pendente</span></div>
+          <h4>Erro no acesso à plataforma</h4><p class="meta">De <b style="color:var(--slate-700)">joao.pereira@cliente.pt</b> · recebido 20/06 17:31</p></div>
+        <div class="side"><span class="timer t-amber"><span class="dot" style="background:var(--amber-600)"></span>00:43:10</span></div>
+      </div>
+
+      <div class="tk"><span class="edge" style="background:var(--emerald-500)"></span>
+        <div class="main"><div><span class="pill cat">Comercial</span> <span class="pill st-pend">pendente</span></div>
+          <h4>Orçamento para viagem a Roma</h4><p class="meta">De <b style="color:var(--slate-700)">rita.melo@cliente.pt</b> · recebido 20/06 18:05</p></div>
+        <div class="side"><span class="timer t-green"><span class="dot" style="background:var(--emerald-600)"></span>01:38:22</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== OPERADOR ===================== -->
+  <span class="secao-rotulo">Vista do operador</span>
+  <div class="app">
+    <div class="nav">
+      <div class="brand"><div class="logo"><svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="7" y="18" width="3.6" height="7" rx="1" fill="#ffffff"/><rect x="13.5" y="13.5" width="3.6" height="11.5" rx="1" fill="#ffffff"/><rect x="20" y="9" width="3.6" height="16" rx="1" fill="#ffffff"/><path d="M5.5 23.5 C 12 8.5, 21 5.5, 27.5 9.5" fill="none" stroke="#14C8B8" stroke-width="2.4" stroke-linecap="round"/><circle cx="27.5" cy="9.5" r="2.3" fill="#14C8B8"/></svg></div><div><b>VoyaMetrics</b><small>Medidor SLA Email</small></div></div>
+      <div class="nav-right">
+        <span class="live"><span class="dot" style="background:var(--emerald-500)"></span>Em direto</span>
+        <div style="display:flex;align-items:center;gap:8px;"><div class="av">CN</div><div style="text-align:right"><div style="font-size:13px;font-weight:600">Carlos Nunes</div><div style="font-size:11px;color:var(--slate-500)">Faturação</div></div></div>
+      </div>
+    </div>
+    <div class="body">
+      <div class="alert">
+        <div style="display:flex;align-items:center;gap:10px;"><span class="ic">&#9888;</span>
+          <div><div style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--rose-700)">SLA ultrapassado · 1 email</div>
+          <div style="font-size:12px;color:var(--rose-600)">Por responder com o prazo já vencido. Priorize já.</div></div></div>
+        <div style="display:flex;gap:6px;color:var(--rose-700);font-size:13px;"><span style="padding:3px 8px">&#128276;</span><span style="padding:3px 8px;border:1px solid var(--rose-500);border-radius:6px">Dispensar</span></div>
+      </div>
+
+      <h2 class="title">A minha fila · Faturação</h2>
+      <p class="subtitle">2 por atribuir · 1 em curso · ordenados pelo SLA mais urgente.</p>
+
+      <div class="tabs"><span class="tab on">Por tratar</span><span class="tab">Pendentes</span><span class="tab">Em curso</span><span class="tab">Resolvidos</span></div>
+
+      <div class="tk"><span class="edge" style="background:var(--rose-500)"></span>
+        <div class="main"><div><span class="pill cat">Faturação</span> <span class="pill st-and">em andamento</span></div>
+          <h4>Reembolso de reserva cancelada</h4><p class="meta">De <b style="color:var(--slate-700)">ana.sousa@cliente.pt</b> · recebido 20/06 16:48</p>
+          <p class="who">A tratar: <b style="color:var(--slate-600)">Carlos Nunes (eu)</b></p></div>
+        <div class="side"><span class="timer t-red"><span class="dot" style="background:var(--rose-600)"></span>+00:12:48</span>
+          <span class="btns"><span class="btn btn-ok">Resolver</span><span class="btn btn-ghost">Libertar</span></span></div>
+      </div>
+
+      <div class="tk"><span class="edge" style="background:var(--amber-500)"></span>
+        <div class="main"><div><span class="pill cat">Faturação</span> <span class="pill st-pend">pendente</span></div>
+          <h4>Pedido de 2.ª via de factura</h4><p class="meta">De <b style="color:var(--slate-700)">miguel.costa@cliente.pt</b> · recebido 20/06 17:55</p></div>
+        <div class="side"><span class="timer t-amber"><span class="dot" style="background:var(--amber-600)"></span>00:24:30</span>
+          <span class="btns"><span class="btn btn-primary">Assumir</span></span></div>
+      </div>
+
+      <div class="tk"><span class="edge" style="background:var(--emerald-500)"></span>
+        <div class="main"><div><span class="pill cat">Faturação</span> <span class="pill st-pend">pendente</span></div>
+          <h4>Confirmação de pagamento por transferência</h4><p class="meta">De <b style="color:var(--slate-700)">sofia.ramos@cliente.pt</b> · recebido 20/06 18:20</p></div>
+        <div class="side"><span class="timer t-green"><span class="dot" style="background:var(--emerald-600)"></span>01:12:05</span>
+          <span class="btns"><span class="btn btn-primary">Assumir</span></span></div>
+      </div>
+
+      <div class="toast">
+        <div style="display:flex;gap:8px;align-items:flex-start;">
+          <span style="width:24px;height:24px;border-radius:50%;background:var(--amber-600);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">&#9201;</span>
+          <div style="min-width:0"><div style="font-size:12px;font-weight:600;color:var(--amber-700)">Faltam menos de 30 min para o SLA</div>
+            <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Pedido de 2.ª via de factura</div>
+            <div style="font-size:12px;color:var(--slate-500)">miguel.costa@cliente.pt</div></div>
+        </div>
+      </div>
+
+      <p class="legend"><b>Legenda dos cronómetros:</b>
+        <span style="color:var(--emerald-700)">&#9679; verde</span> = mais de 60 min ·
+        <span style="color:var(--amber-700)">&#9679; laranja</span> = menos de 60 min ·
+        <span style="color:var(--rose-700)">&#9679; vermelho</span> = prazo ultrapassado (mostra atraso com +)</p>
+    </div>
+  </div>
+
+  <p class="foot">Mockup estático · VoyaMetrics — Medidor SLA Email · SLA 09h30–19h00 (horas úteis), feriados nacionais excluídos.</p>
+</div>
+</body>
+</html>

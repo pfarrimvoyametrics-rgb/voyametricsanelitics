@@ -1,0 +1,60 @@
+# =====================================================================
+#  Arranque COMPLETO num único comando:
+#      docker compose up
+#  A aplicação fica em:  http://localhost:8080
+#  (não é preciso instalar Node nem PostgreSQL à parte)
+# =====================================================================
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ticket_db
+    environment:
+      POSTGRES_USER: ticket
+      POSTGRES_PASSWORD: ticket
+      POSTGRES_DB: ticketdb
+      TZ: Europe/Lisbon
+      PGTZ: Europe/Lisbon
+    volumes:
+      - ticket_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ticket -d ticketdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: ticket_backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development          # modo teste: "+ Ticket de teste" activo, Outlook opcional
+      PORT: "4000"
+      TZ: Europe/Lisbon
+      DATABASE_URL: postgres://ticket:ticket@db:5432/ticketdb
+      CLIENT_URL: http://localhost:8080
+      JWT_SECRET: troque-este-segredo-em-producao
+      SLA_HORA_INICIO: "09:30"
+      SLA_HORA_FIM: "19:00"
+      SLA_MINUTOS_UTEIS: "120"
+      TRIAGEM_CATEGORIA_PADRAO: comercial
+      LOCK_RELEASE_MINUTES: "5"
+      # Super administrador criado no arranque (mude a palavra-passe!).
+      SUPER_ADMIN_EMAIL: admin@voyametrics.pt
+      SUPER_ADMIN_PASSWORD: mudar-super-admin-123
+      SUPER_ADMIN_NOME: Super Administrador
+      BCRYPT_ROUNDS: "12"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: ticket_frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  ticket_pgdata:

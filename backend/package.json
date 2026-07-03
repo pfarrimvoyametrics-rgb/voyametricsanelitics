@@ -1,0 +1,29 @@
+{
+  "name": "ticket-system-backend",
+  "version": "1.0.0",
+  "description": "Sistema de gestão de tickets, SLA e distribuição de equipa — backend",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "migrate": "node src/cli.js migrate",
+    "seed": "node src/cli.js seed",
+    "db:reset": "node src/cli.js migrate && node src/cli.js seed",
+    "create-admin": "node src/cli.js create-admin",
+    "graph:subscribe": "node src/cli.js subscribe",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0",
+    "socket.io": "^4.7.5"
+  }
+}
