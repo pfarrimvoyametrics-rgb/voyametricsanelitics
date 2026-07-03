@@ -8,6 +8,7 @@
  *  - semearUtilizadoresDemo(): perfis de demonstração com palavra-passe.
  */
 const userModel = require('../models/userModel');
+const orgModel = require('../models/orgModel');
 const { gerarHash } = require('../utils/password');
 const { PAPEIS } = require('../utils/papeis');
 const { env } = require('../config/env');
@@ -58,9 +59,12 @@ const DEMO = [
  */
 async function semearUtilizadoresDemo() {
   const senhaHash = await gerarHash(env.demoPassword);
+  // Os perfis demo pertencem à organização 'demo' (criada na migração 002).
+  const orgDemo = await orgModel.porSlug('demo');
+  const organizacaoId = orgDemo ? orgDemo.id : null;
   let n = 0;
   for (const u of DEMO) {
-    await userModel.upsert({ ...u, senhaHash, ativo: true });
+    await userModel.upsert({ ...u, senhaHash, ativo: true, organizacaoId });
     n += 1;
   }
   return n;
@@ -77,7 +81,7 @@ const PAPEIS_CRIAVEIS = [PAPEIS.OPERADOR, PAPEIS.ADMIN];
  * outro super_admin (esse é exclusivo do arranque, via ambiente).
  * @throws {Error} com `.status` para o handler HTTP mapear.
  */
-async function criarUtilizador({ nome, email, categoria, funcao, password }) {
+async function criarUtilizador({ nome, email, categoria, funcao, password, organizacaoId }) {
   const erro = (msg, status = 400) => Object.assign(new Error(msg), { status });
 
   nome = (nome || '').trim();
@@ -85,6 +89,7 @@ async function criarUtilizador({ nome, email, categoria, funcao, password }) {
   funcao = (funcao || PAPEIS.OPERADOR).trim();
   categoria = (categoria || '').trim() || null;
 
+  if (!organizacaoId) throw erro('Organização em falta.');
   if (!nome) throw erro('Nome em falta.');
   if (!RE_EMAIL.test(email)) throw erro('Email inválido.');
   if (!PAPEIS_CRIAVEIS.includes(funcao)) throw erro('Função inválida (operador ou admin).');
@@ -97,30 +102,33 @@ async function criarUtilizador({ nome, email, categoria, funcao, password }) {
 
   const senhaHash = await gerarHash(password);
   try {
-    return await userModel.criar({ nome, email, categoria, funcao, senhaHash, ativo: true });
+    return await userModel.criar({ nome, email, categoria, funcao, senhaHash, ativo: true, organizacaoId });
   } catch (e) {
     if (e.code === '23505') throw erro('Já existe um utilizador com esse email.', 409);
     throw e;
   }
 }
 
-/** Ativa/desativa um utilizador (não permite mexer num super_admin). */
-async function definirAtivoUtilizador(id, ativo) {
+/**
+ * Ativa/desativa um utilizador dentro de uma organização. Devolve null (→404) se
+ * não existir ou não pertencer à organização; 403 se for um super_admin.
+ */
+async function definirAtivoUtilizador(id, ativo, orgId) {
   const alvo = await userModel.porId(id);
-  if (!alvo) return null;
+  if (!alvo || alvo.organizacao_id !== orgId) return null;
   if (alvo.funcao === PAPEIS.SUPER_ADMIN) {
     throw Object.assign(new Error('O super administrador não pode ser desativado aqui.'), { status: 403 });
   }
   return userModel.definirAtivo(id, !!ativo);
 }
 
-/** Redefine a palavra-passe de um utilizador (mín. 8 caracteres). */
-async function redefinirSenha(id, password) {
+/** Redefine a palavra-passe de um utilizador da organização (mín. 8 caracteres). */
+async function redefinirSenha(id, password, orgId) {
   if (!password || String(password).length < 8) {
     throw Object.assign(new Error('A palavra-passe deve ter pelo menos 8 caracteres.'), { status: 400 });
   }
   const alvo = await userModel.porId(id);
-  if (!alvo) return null;
+  if (!alvo || alvo.organizacao_id !== orgId) return null;
   await userModel.definirSenha(id, await gerarHash(password));
   return alvo;
 }

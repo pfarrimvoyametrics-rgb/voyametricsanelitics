@@ -10,7 +10,7 @@ const relatorioModel = require('../models/relatorioModel');
 const insightsService = require('../services/insightsService');
 const pdfRelatorio = require('../services/pdfRelatorio');
 const pdfLideranca = require('../services/pdfLideranca');
-const { exigirAutenticacao, exigirAdmin } = require('../middleware/auth');
+const { exigirAutenticacao, exigirAdmin, resolverOrg } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -36,6 +36,7 @@ async function obterDados(req) {
     ? req.query.granularidade : 'dia';
 
   const f = {
+    orgId: req.orgId, // isolamento multi-tenant
     de, ate,
     cliente: req.query.cliente ? String(req.query.cliente).trim() : null,
     operador: req.query.operador ? String(req.query.operador).trim() : null,
@@ -78,7 +79,7 @@ async function obterDados(req) {
   };
 }
 
-router.get('/', exigirAutenticacao, exigirAdmin, async (req, res) => {
+router.get('/', exigirAutenticacao, exigirAdmin, resolverOrg, async (req, res) => {
   try {
     res.json(await obterDados(req));
   } catch (err) {
@@ -88,7 +89,7 @@ router.get('/', exigirAutenticacao, exigirAdmin, async (req, res) => {
 });
 
 // GET /api/relatorios/pdf — relatório de marca, gerado no servidor.
-router.get('/pdf', exigirAutenticacao, exigirAdmin, async (req, res) => {
+router.get('/pdf', exigirAutenticacao, exigirAdmin, resolverOrg, async (req, res) => {
   try {
     const dados = await obterDados(req);
     const buffer = await pdfRelatorio.gerar(dados);
@@ -103,7 +104,7 @@ router.get('/pdf', exigirAutenticacao, exigirAdmin, async (req, res) => {
 });
 
 // GET /api/relatorios/lideranca/pdf — Balanço de Liderança de um operador.
-router.get('/lideranca/pdf', exigirAutenticacao, exigirAdmin, async (req, res) => {
+router.get('/lideranca/pdf', exigirAutenticacao, exigirAdmin, resolverOrg, async (req, res) => {
   try {
     const dados = await obterDados(req);
     const buffer = await pdfLideranca.gerar(dados);

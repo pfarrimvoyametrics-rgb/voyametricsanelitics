@@ -101,6 +101,8 @@ function normalizarFiltros(input, base) {
     desde: input.desde ?? base.desde ?? null,
     ate: input.ate ?? base.ate ?? null,
     status: input.status ?? base.status ?? null,
+    // A organização NUNCA vem do modelo — só do contexto do pedido.
+    orgId: base.orgId ?? null,
   };
   for (const campo of ['desde', 'ate']) {
     if (p[campo] !== null && Number.isNaN(Date.parse(p[campo]))) {
@@ -117,12 +119,13 @@ async function volumePorEquipa(filtros) {
   const { rows } = await pool.query(
     `SELECT categoria_ticket AS equipa, COUNT(*)::int AS total
        FROM tickets
-      WHERE ($1::timestamptz IS NULL OR data_rececao >= $1)
+      WHERE organizacao_id = $4
+        AND ($1::timestamptz IS NULL OR data_rececao >= $1)
         AND ($2::timestamptz IS NULL OR data_rececao <  $2)
         AND ($3::text        IS NULL OR status = $3)
       GROUP BY categoria_ticket
       ORDER BY total DESC`,
-    [filtros.desde, filtros.ate, filtros.status]
+    [filtros.desde, filtros.ate, filtros.status, filtros.orgId]
   );
   const totalGeral = rows.reduce((s, r) => s + r.total, 0);
   return {
@@ -144,12 +147,13 @@ async function evolucaoDiariaPorEquipa(filtros) {
             date_trunc('day', data_rececao)::date AS dia,
             COUNT(*)::int AS total
        FROM tickets
-      WHERE ($1::timestamptz IS NULL OR data_rececao >= $1)
+      WHERE organizacao_id = $4
+        AND ($1::timestamptz IS NULL OR data_rececao >= $1)
         AND ($2::timestamptz IS NULL OR data_rececao <  $2)
         AND ($3::text        IS NULL OR status = $3)
       GROUP BY equipa, dia
       ORDER BY dia ASC, equipa ASC`,
-    [filtros.desde, filtros.ate, filtros.status]
+    [filtros.desde, filtros.ate, filtros.status, filtros.orgId]
   );
   return {
     periodo: { desde: filtros.desde, ate: filtros.ate },
@@ -221,6 +225,7 @@ async function analisarVolumeEquipas(opts = {}) {
     desde: opts.desde ?? null,
     ate: opts.ate ?? null,
     status: opts.status ?? null,
+    orgId: opts.orgId ?? null,
   };
 
   const messages = [
@@ -288,6 +293,7 @@ async function analisarVolumeEquipasStream(opts = {}, cb = {}) {
     desde: opts.desde ?? null,
     ate: opts.ate ?? null,
     status: opts.status ?? null,
+    orgId: opts.orgId ?? null,
   };
 
   const messages = [

@@ -17,6 +17,7 @@ const triageService = require('../services/triageService');
 const slaService = require('../services/slaService');
 const ticketModel = require('../models/ticketModel');
 const ticketService = require('../services/ticketService');
+const orgModel = require('../models/orgModel');
 
 const router = express.Router();
 
@@ -30,20 +31,30 @@ async function processarNotificacao(io, notificacao) {
     const messageId = notificacao.resourceData?.id;
     if (!messageId) return;
 
+    // Multi-tenant: por agora existe UMA caixa partilhada (config global), que
+    // mapeamos para a organização 'demo'. O Graph por-cliente (uma caixa por
+    // organização) fica para uma iteração futura.
+    const org = await orgModel.porSlug('demo');
+    if (!org) {
+      console.warn('[webhook] Organização "demo" inexistente — notificação ignorada.');
+      return;
+    }
+
     // 1) Ler o email completo
     const email = await graphService.obterMensagem(messageId);
 
-    // 2) Triagem -> categoria
+    // 2) Triagem -> categoria (regras da organização)
     const { categoria } = await triageService.triar({
       assunto: email.assunto,
       corpo: email.corpoEmail,
-    });
+    }, org.id);
 
-    // 3) Calcular SLA (2h úteis)
-    const slaLimite = slaService.calcularSlaLimite(email.dataRececao);
+    // 3) Calcular SLA (config da organização, com fallback global)
+    const slaLimite = slaService.calcularSlaLimite(email.dataRececao, slaService.configDaOrg(org));
 
     // 4) Gravar (idempotente)
     const ticket = await ticketModel.criar({
+      organizacaoId: org.id,
       outlookMessageId: email.outlookMessageId,
       remetente: email.remetente,
       assunto: email.assunto,

@@ -3,12 +3,14 @@
  * de tempo real. É usado tanto pelas rotas HTTP como pelos handlers de
  * WebSocket, para haver uma única fonte de verdade.
  *
- * Eventos emitidos (por sala de categoria + sala 'admins'):
- *   ticket:novo       — chegou um ticket novo (após triagem)
- *   ticket:bloqueado  — um operador assumiu (esconder/bloquear nos outros)
- *   ticket:libertado  — voltou a 'pendente' (mostrar de novo)
- *   ticket:resolvido  — foi resolvido
- *   metricas:atualizar— sinal para o painel admin recarregar números
+ * Multi-tenant: as salas de tempo real são por ORGANIZAÇÃO + categoria, para
+ * que um evento de um cliente nunca chegue a outro:
+ *   org:<orgId>:cat:<categoria>   — operadores dessa categoria/organização
+ *   org:<orgId>:admins            — admins dessa organização (e super_admin a observar)
+ *
+ * Eventos emitidos:
+ *   ticket:novo · ticket:bloqueado · ticket:libertado · ticket:resolvido
+ *   metricas:atualizar — sinal para o painel admin recarregar números
  */
 
 const { pool } = require('../config/db');
@@ -16,37 +18,39 @@ const ticketModel = require('../models/ticketModel');
 const { env } = require('../config/env');
 const { ehAdmin } = require('../utils/papeis');
 
-const salaCategoria = (cat) => `cat:${cat}`;
-const SALA_ADMINS = 'admins';
+const salaCategoria = (orgId, cat) => `org:${orgId}:cat:${cat}`;
+const salaAdmins = (orgId) => `org:${orgId}:admins`;
 
-/** Emite um evento para a categoria do ticket e para os admins. */
+/** Emite um evento para a categoria do ticket e para os admins da organização. */
 function emitir(io, evento, ticket, extra = {}) {
   const payload = { ticket, ...extra };
-  io.to(salaCategoria(ticket.categoria_ticket)).emit(evento, payload);
-  io.to(SALA_ADMINS).emit(evento, payload);
-  // Qualquer alteração mexe nas métricas do supervisor.
-  io.to(SALA_ADMINS).emit('metricas:atualizar');
+  const org = ticket.organizacao_id;
+  io.to(salaCategoria(org, ticket.categoria_ticket)).emit(evento, payload);
+  io.to(salaAdmins(org)).emit(evento, payload);
+  // Qualquer alteração mexe nas métricas do supervisor dessa organização.
+  io.to(salaAdmins(org)).emit('metricas:atualizar');
 }
 
-/** Anuncia um ticket recém-criado (chamado pelo webhook após triagem). */
+/** Anuncia um ticket recém-criado (chamado pelo webhook/mock após triagem). */
 function anunciarNovo(io, ticket) {
   emitir(io, 'ticket:novo', ticket);
 }
 
 /**
  * Operador assume um ticket. Atómico: só funciona se ainda 'pendente'.
+ * Escopado à organização (`orgId`).
  * @returns {{ok: boolean, ticket?: object, motivo?: string}}
  */
-async function assumir(io, ticketId, operador) {
-  const ticket = await ticketModel.porId(ticketId);
+async function assumir(io, ticketId, operador, orgId) {
+  const ticket = await ticketModel.porId(ticketId, orgId);
   if (!ticket) return { ok: false, motivo: 'inexistente' };
 
-  // Operador só pode assumir tickets da sua categoria (admin pode tudo).
+  // Operador só pode assumir tickets da sua categoria (admin/super pode tudo).
   if (!ehAdmin(operador.funcao) && ticket.categoria_ticket !== operador.categoria) {
     return { ok: false, motivo: 'categoria_errada' };
   }
 
-  const atualizado = await ticketModel.atribuirSeLivre(ticketId, operador.id);
+  const atualizado = await ticketModel.atribuirSeLivre(ticketId, operador.id, orgId);
   if (!atualizado) return { ok: false, motivo: 'ja_tomado' };
 
   emitir(io, 'ticket:bloqueado', atualizado, { operadorNome: operador.nome });
@@ -54,16 +58,16 @@ async function assumir(io, ticketId, operador) {
 }
 
 /** Liberta um ticket (pelo próprio operador, por admin, ou pelo sweeper). */
-async function libertar(io, ticketId, { operadorId = null, porSistema = false } = {}) {
-  const liberto = await ticketModel.libertar(ticketId, porSistema ? null : operadorId);
+async function libertar(io, ticketId, { operadorId = null, porSistema = false, orgId } = {}) {
+  const liberto = await ticketModel.libertar(ticketId, porSistema ? null : operadorId, orgId);
   if (!liberto) return { ok: false, motivo: 'nao_estava_em_andamento' };
   emitir(io, 'ticket:libertado', liberto, { porSistema });
   return { ok: true, ticket: liberto };
 }
 
 /** Marca como resolvido e (opcional) já respondeu pelo Outlook. */
-async function resolver(io, ticketId, operadorId) {
-  const resolvido = await ticketModel.resolver(ticketId, operadorId);
+async function resolver(io, ticketId, operadorId, orgId) {
+  const resolvido = await ticketModel.resolver(ticketId, operadorId, orgId);
   if (!resolvido) return { ok: false, motivo: 'nao_resolvavel' };
   emitir(io, 'ticket:resolvido', resolvido);
   return { ok: true, ticket: resolvido };
@@ -71,21 +75,21 @@ async function resolver(io, ticketId, operadorId) {
 
 /**
  * Batimento (heartbeat): enquanto o operador tem o ticket aberto, o cliente
- * envia pings periódicos que refrescam data_bloqueio. Assim um ticket
- * ATIVO nunca é libertado pelo sweeper; só os de páginas fechadas expiram.
+ * envia pings periódicos que refrescam data_bloqueio. Escopado à organização.
  */
-async function registarBatimento(ticketId, operadorId) {
+async function registarBatimento(ticketId, operadorId, orgId) {
   await pool.query(
     `UPDATE tickets SET data_bloqueio = now()
-      WHERE id = $1 AND operador_atribuido_id = $2 AND status = 'em_andamento'`,
-    [ticketId, operadorId]
+      WHERE id = $1 AND operador_atribuido_id = $2 AND organizacao_id = $3
+        AND status = 'em_andamento'`,
+    [ticketId, operadorId, orgId]
   );
 }
 
 /**
  * Sweeper: a cada 30 s liberta tickets cujo bloqueio expirou (sem batimento
- * há mais de LOCK_RELEASE_MINUTES). Robusto a reinícios do servidor, pois
- * baseia-se no estado persistido (data_bloqueio), não em timers em memória.
+ * há mais de LOCK_RELEASE_MINUTES), em TODAS as organizações. Robusto a
+ * reinícios (baseia-se no estado persistido). Emite à sala da org de cada ticket.
  */
 function iniciarSweeper(io) {
   const intervaloMs = 30 * 1000;
@@ -93,7 +97,7 @@ function iniciarSweeper(io) {
     try {
       const expirados = await ticketModel.bloqueiosExpirados(env.lockReleaseMinutes);
       for (const t of expirados) {
-        await libertar(io, t.id, { porSistema: true });
+        await libertar(io, t.id, { porSistema: true, orgId: t.organizacao_id });
         console.log(`[sweeper] Ticket ${t.id} libertado por inatividade.`);
       }
     } catch (err) {
@@ -111,5 +115,5 @@ module.exports = {
   registarBatimento,
   iniciarSweeper,
   salaCategoria,
-  SALA_ADMINS,
+  salaAdmins,
 };

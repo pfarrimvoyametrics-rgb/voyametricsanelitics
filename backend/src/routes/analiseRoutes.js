@@ -6,7 +6,7 @@ const {
   analisarVolumeEquipas,
   analisarVolumeEquipasStream,
 } = require('../services/analiseIaService');
-const { exigirAutenticacao, exigirAdmin } = require('../middleware/auth');
+const { exigirAutenticacao, exigirAdmin, resolverOrg } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -16,10 +16,10 @@ const router = express.Router();
  *   { desde?: ISO, ate?: ISO, status?: 'pendente'|'em_andamento'|'resolvido', pergunta?: string }
  * Devolve: { analise, modelo, uso }
  */
-router.post('/volume-equipas', exigirAutenticacao, exigirAdmin, async (req, res) => {
+router.post('/volume-equipas', exigirAutenticacao, exigirAdmin, resolverOrg, async (req, res) => {
   try {
     const { desde, ate, status, pergunta } = req.body || {};
-    const resultado = await analisarVolumeEquipas({ desde, ate, status, pergunta });
+    const resultado = await analisarVolumeEquipas({ desde, ate, status, pergunta, orgId: req.orgId });
     res.json(resultado);
   } catch (err) {
     console.error('[analise] Falha:', err.message);
@@ -33,7 +33,7 @@ router.post('/volume-equipas', exigirAutenticacao, exigirAdmin, async (req, res)
  * Eventos: `status` (a consultar dados), `delta` (fragmento de texto),
  *          `fim` (metadados finais), `erro`.
  */
-router.post('/volume-equipas/stream', exigirAutenticacao, exigirAdmin, async (req, res) => {
+router.post('/volume-equipas/stream', exigirAutenticacao, exigirAdmin, resolverOrg, async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
@@ -41,7 +41,10 @@ router.post('/volume-equipas/stream', exigirAutenticacao, exigirAdmin, async (re
   if (res.flushHeaders) res.flushHeaders();
 
   let fechado = false;
-  req.on('close', () => { fechado = true; });
+  // NB: usar res.on('close') e não req.on('close') — no Node 18+ o 'close' do
+  // request dispara assim que o corpo é lido, o que faria saltar toda a escrita
+  // e o res.end(). O 'close' da RESPOSTA só dispara quando o cliente desliga.
+  res.on('close', () => { fechado = true; });
 
   const enviar = (evento, dados) => {
     if (fechado) return;
@@ -51,7 +54,7 @@ router.post('/volume-equipas/stream', exigirAutenticacao, exigirAdmin, async (re
   try {
     const { desde, ate, status, pergunta } = req.body || {};
     const fim = await analisarVolumeEquipasStream(
-      { desde, ate, status, pergunta },
+      { desde, ate, status, pergunta, orgId: req.orgId },
       {
         onDelta: (texto) => enviar('delta', { texto }),
         onFerramenta: (ferramenta) => enviar('status', { ferramenta }),

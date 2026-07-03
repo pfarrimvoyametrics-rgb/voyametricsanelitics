@@ -17,6 +17,7 @@ function emitirToken(utilizador) {
       nome: utilizador.nome,
       categoria: utilizador.categoria,
       funcao: utilizador.funcao,
+      organizacao_id: utilizador.organizacao_id ?? null,
     },
     env.jwtSecret,
     { expiresIn: env.jwtExpiry }
@@ -40,6 +41,7 @@ function exigirAutenticacao(req, res, next) {
       nome: dados.nome,
       categoria: dados.categoria,
       funcao: dados.funcao,
+      organizacaoId: dados.organizacao_id ?? null,
     };
     next();
   } catch {
@@ -63,10 +65,49 @@ function exigirSuperAdmin(req, res, next) {
   next();
 }
 
+/**
+ * Resolve a organização-alvo do pedido e coloca-a em `req.orgId`.
+ *  - admin/operador: SEMPRE a organização do próprio token (barreira
+ *    anti-cross-tenant — qualquer valor enviado pelo cliente é ignorado).
+ *  - super_admin: a organização indicada no header `x-org-id`, validada
+ *    (existe e está ativa). Sem header -> 400; org inexistente/inativa -> 404.
+ * Usar depois de `exigirAutenticacao`.
+ */
+async function resolverOrg(req, res, next) {
+  const u = req.utilizador;
+  if (!u) return res.status(401).json({ erro: 'Não autenticado.' });
+
+  if (!ehSuperAdmin(u.funcao)) {
+    if (!u.organizacaoId) {
+      return res.status(403).json({ erro: 'Utilizador sem organização.' });
+    }
+    req.orgId = u.organizacaoId;
+    return next();
+  }
+
+  // super_admin: precisa de indicar a organização a operar.
+  const orgId = req.headers['x-org-id'];
+  if (!orgId) {
+    return res.status(400).json({ erro: 'Selecione uma organização (header x-org-id).' });
+  }
+  try {
+    const orgModel = require('../models/orgModel');
+    const org = await orgModel.porId(orgId);
+    if (!org || !org.ativo) {
+      return res.status(404).json({ erro: 'Organização não encontrada ou inativa.' });
+    }
+    req.orgId = org.id;
+    next();
+  } catch {
+    return res.status(400).json({ erro: 'Organização inválida.' });
+  }
+}
+
 module.exports = {
   emitirToken,
   verificarToken,
   exigirAutenticacao,
   exigirAdmin,
   exigirSuperAdmin,
+  resolverOrg,
 };

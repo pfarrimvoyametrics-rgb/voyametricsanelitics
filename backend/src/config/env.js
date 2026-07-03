@@ -52,6 +52,11 @@ const env = {
 
   // Locking
   lockReleaseMinutes: parseInt(process.env.LOCK_RELEASE_MINUTES || '5', 10),
+
+  // Integração servidor-a-servidor (chave de API; se ausente, endpoints 503).
+  integracao: {
+    apiKey: process.env.INTEGRACAO_API_KEY,
+  },
 };
 
 module.exports = { env };

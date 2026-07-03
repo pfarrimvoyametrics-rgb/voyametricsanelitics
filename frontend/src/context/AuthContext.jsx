@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { api, guardarToken, lerToken, limparToken } from '../api/client';
+import { api, guardarToken, lerToken, limparToken, definirOrgAtiva } from '../api/client';
 
 const AuthContext = createContext(null);
 
@@ -34,6 +34,7 @@ export function AuthProvider({ children }) {
 
   const sair = useCallback(() => {
     limparToken();
+    definirOrgAtiva(null);
     setUtilizador(null);
   }, []);
 

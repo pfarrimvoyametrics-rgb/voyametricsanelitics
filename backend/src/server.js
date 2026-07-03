@@ -16,9 +16,16 @@ const ticketService = require('./services/ticketService');
 // Rotas
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
+const orgRoutes = require('./routes/orgRoutes');
+const regraRoutes = require('./routes/regraRoutes');
+const configRoutes = require('./routes/configRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const analiseRoutes = require('./routes/analiseRoutes');
+const canalRoutes = require('./routes/canalRoutes');
+const csatRoutes = require('./routes/csatRoutes');
+const relatorioRoutes = require('./routes/relatorioRoutes');
+const integracaoRoutes = require('./routes/integracaoRoutes');
 
 const app = express();
 app.use(cors({ origin: env.clientUrl, credentials: true }));
@@ -36,9 +43,16 @@ configurarSockets(io);
 app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', userRoutes);
+app.use('/api/organizacoes', orgRoutes);
+app.use('/api/regras', regraRoutes);
+app.use('/api/config', configRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/analise', analiseRoutes);
+app.use('/api/canais', canalRoutes);
+app.use('/api/csat', csatRoutes);
+app.use('/api/relatorios', relatorioRoutes);
+app.use('/api/integracoes', integracaoRoutes);
 
 // --- Rota de DESENVOLVIMENTO: injetar um ticket falso para testar a UI -------
 // (desativada em produção). Útil para validar fila/cronómetro sem o Outlook.
@@ -46,8 +60,10 @@ if (env.nodeEnv !== 'production') {
   const slaService = require('./services/slaService');
   const triageService = require('./services/triageService');
   const ticketModel = require('./models/ticketModel');
+  const orgModel = require('./models/orgModel');
+  const { exigirAutenticacao, resolverOrg } = require('./middleware/auth');
 
-  app.post('/api/dev/mock-ticket', async (req, res) => {
+  app.post('/api/dev/mock-ticket', exigirAutenticacao, resolverOrg, async (req, res) => {
     const exemplos = [
       { assunto: 'Erro ao aceder à plataforma', corpo: 'Não funciona o login, preciso de ajuda.' },
       { assunto: 'Fatura em duplicado', corpo: 'Recebi um recibo errado, pedido de reembolso.' },
@@ -55,9 +71,11 @@ if (env.nodeEnv !== 'production') {
     ];
     const e = req.body?.assunto ? req.body : exemplos[Math.floor(Math.random() * exemplos.length)];
     const dataRececao = new Date();
-    const { categoria } = await triageService.triar({ assunto: e.assunto, corpo: e.corpo });
-    const slaLimite = slaService.calcularSlaLimite(dataRececao);
+    const { categoria } = await triageService.triar({ assunto: e.assunto, corpo: e.corpo }, req.orgId);
+    const org = await orgModel.porId(req.orgId);
+    const slaLimite = slaService.calcularSlaLimite(dataRececao, slaService.configDaOrg(org));
     const ticket = await ticketModel.criar({
+      organizacaoId: req.orgId,
       outlookMessageId: `mock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       remetente: e.remetente || 'cliente.teste@exemplo.pt',
       assunto: e.assunto,

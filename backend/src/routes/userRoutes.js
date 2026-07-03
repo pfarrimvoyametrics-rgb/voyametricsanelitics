@@ -1,15 +1,18 @@
 /**
- * userRoutes.js — Consulta e gestão de utilizadores.
+ * userRoutes.js — Consulta e gestão de utilizadores (escopada por organização).
  *
- *  - GET  /api/usuarios          (admin)        — listar
- *  - POST /api/usuarios          (super admin)  — criar operador/admin
- *  - PATCH /api/usuarios/:id/ativo (super admin) — ativar/desativar
- *  - POST /api/usuarios/:id/senha  (super admin) — redefinir palavra-passe
+ *  - GET   /api/usuarios           (admin) — listar os da organização
+ *  - POST  /api/usuarios           (admin) — criar operador/admin na organização
+ *  - PATCH /api/usuarios/:id/ativo  (admin) — ativar/desativar
+ *  - POST  /api/usuarios/:id/senha  (admin) — redefinir palavra-passe
+ *
+ * `resolverOrg` fixa `req.orgId`: para admin de organização é a sua própria
+ * (do token); para super_admin é a org selecionada (header x-org-id).
  */
 const express = require('express');
 const userModel = require('../models/userModel');
 const userService = require('../services/userService');
-const { exigirAutenticacao, exigirAdmin, exigirSuperAdmin } = require('../middleware/auth');
+const { exigirAutenticacao, exigirAdmin, resolverOrg } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -20,26 +23,26 @@ function tratar(res, err) {
   res.status(status).json({ erro: err.message || 'Erro interno.' });
 }
 
-// GET /api/usuarios — lista todos os funcionários (admins e super admin).
-router.get('/', exigirAutenticacao, exigirAdmin, async (_req, res) => {
-  const lista = await userModel.listarTodos();
+// GET /api/usuarios — lista os utilizadores da organização.
+router.get('/', exigirAutenticacao, exigirAdmin, resolverOrg, async (req, res) => {
+  const lista = await userModel.listarTodos(req.orgId);
   res.json(lista);
 });
 
-// POST /api/usuarios — cria um operador ou admin (só super admin).
-router.post('/', exigirAutenticacao, exigirSuperAdmin, async (req, res) => {
+// POST /api/usuarios — cria um operador ou admin na organização.
+router.post('/', exigirAutenticacao, exigirAdmin, resolverOrg, async (req, res) => {
   try {
-    const criado = await userService.criarUtilizador(req.body || {});
+    const criado = await userService.criarUtilizador({ ...(req.body || {}), organizacaoId: req.orgId });
     res.status(201).json(criado);
   } catch (err) {
     tratar(res, err);
   }
 });
 
-// PATCH /api/usuarios/:id/ativo — ativa/desativa (só super admin).
-router.patch('/:id/ativo', exigirAutenticacao, exigirSuperAdmin, async (req, res) => {
+// PATCH /api/usuarios/:id/ativo — ativa/desativa (dentro da organização).
+router.patch('/:id/ativo', exigirAutenticacao, exigirAdmin, resolverOrg, async (req, res) => {
   try {
-    const atualizado = await userService.definirAtivoUtilizador(req.params.id, req.body?.ativo);
+    const atualizado = await userService.definirAtivoUtilizador(req.params.id, req.body?.ativo, req.orgId);
     if (!atualizado) return res.status(404).json({ erro: 'Utilizador não encontrado.' });
     res.json(atualizado);
   } catch (err) {
@@ -47,10 +50,10 @@ router.patch('/:id/ativo', exigirAutenticacao, exigirSuperAdmin, async (req, res
   }
 });
 
-// POST /api/usuarios/:id/senha — redefine a palavra-passe (só super admin).
-router.post('/:id/senha', exigirAutenticacao, exigirSuperAdmin, async (req, res) => {
+// POST /api/usuarios/:id/senha — redefine a palavra-passe (dentro da organização).
+router.post('/:id/senha', exigirAutenticacao, exigirAdmin, resolverOrg, async (req, res) => {
   try {
-    const alvo = await userService.redefinirSenha(req.params.id, req.body?.password);
+    const alvo = await userService.redefinirSenha(req.params.id, req.body?.password, req.orgId);
     if (!alvo) return res.status(404).json({ erro: 'Utilizador não encontrado.' });
     res.json({ ok: true });
   } catch (err) {

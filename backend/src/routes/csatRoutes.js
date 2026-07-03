@@ -17,7 +17,7 @@ const limitar = limitadorPedidos({ janelaMs: 60_000, maximo: 20, mensagem: 'Dema
 // GET — dados mínimos para o ecrã do inquérito.
 router.get('/:id', limitar, async (req, res) => {
   try {
-    const t = await ticketModel.porId(req.params.id);
+    const t = await ticketModel.porIdPublico(req.params.id);
     if (!t) return res.status(404).json({ erro: 'Inquérito não encontrado.' });
     res.json({ id: t.id, assunto: t.assunto, status: t.status, ja_respondido: t.csat != null });
   } catch (err) {
