@@ -36,9 +36,13 @@ router.post('/login', async (req, res) => {
   res.json({ token, utilizador });
 });
 
-// GET /api/auth/me
-router.get('/me', exigirAutenticacao, (req, res) => {
-  res.json({ utilizador: req.utilizador });
+// GET /api/auth/me — perfil completo e atual (inclui organizacao_nome).
+router.get('/me', exigirAutenticacao, async (req, res) => {
+  const utilizador = await userModel.porId(req.utilizador.id);
+  if (!utilizador || !utilizador.ativo) {
+    return res.status(401).json({ erro: 'Sessão inválida.' });
+  }
+  res.json({ utilizador });
 });
 
 module.exports = router;

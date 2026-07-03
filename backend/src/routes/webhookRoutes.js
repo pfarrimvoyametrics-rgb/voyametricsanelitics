@@ -17,6 +17,7 @@ const triageService = require('../services/triageService');
 const slaService = require('../services/slaService');
 const ticketModel = require('../models/ticketModel');
 const ticketService = require('../services/ticketService');
+const orgModel = require('../models/orgModel');
 
 const router = express.Router();
 
@@ -33,17 +34,31 @@ async function processarNotificacao(io, notificacao) {
     // 1) Ler o email completo
     const email = await graphService.obterMensagem(messageId);
 
-    // 2) Triagem -> categoria
+    // Multi-tenant: roteia o email para a organização pelos DESTINATÁRIOS (e, em
+    // último caso, pelo REMETENTE), comparando com os domínios/endereços que cada
+    // organização declara (`email_dominios`). Sem correspondência, cai na
+    // organização por omissão (INGESTAO_ORG_PADRAO, 'demo') — retrocompatível.
+    const enderecos = [...(email.destinatarios || []), email.remetente].filter(Boolean);
+    const orgs = await orgModel.listar();
+    let org = orgModel.escolherOrgPorEnderecos(orgs, enderecos);
+    if (!org) org = await orgModel.porSlug(env.ingestao.orgPadrao);
+    if (!org || !org.ativo) {
+      console.warn(`[webhook] Sem organização-alvo (padrão "${env.ingestao.orgPadrao}") — notificação ignorada.`);
+      return;
+    }
+
+    // 2) Triagem -> categoria (regras da organização)
     const { categoria } = await triageService.triar({
       assunto: email.assunto,
       corpo: email.corpoEmail,
-    });
+    }, org.id);
 
-    // 3) Calcular SLA (2h úteis)
-    const slaLimite = slaService.calcularSlaLimite(email.dataRececao);
+    // 3) Calcular SLA (config da organização, com fallback global)
+    const slaLimite = slaService.calcularSlaLimite(email.dataRececao, slaService.configDaOrg(org));
 
     // 4) Gravar (idempotente)
     const ticket = await ticketModel.criar({
+      organizacaoId: org.id,
       outlookMessageId: email.outlookMessageId,
       remetente: email.remetente,
       assunto: email.assunto,

@@ -42,11 +42,16 @@ const metricas = (col = '') => {
  * Constrói a cláusula WHERE (período + âmbito) e os parâmetros.
  * @returns {{where: string, params: any[]}}
  */
-function filtro({ de, ate, cliente, operador, equipa }, col = '') {
+function filtro({ orgId, de, ate, cliente, operador, equipa }, col = '') {
   const c = col ? `${col}.` : '';
-  const cond = [`${c}data_rececao >= $1`, `${c}data_rececao < ($2::date + interval '1 day')`];
-  const params = [de, ate];
-  let i = 3;
+  // Isolamento multi-tenant: a organização é SEMPRE o 1.º parâmetro.
+  const cond = [
+    `${c}organizacao_id = $1`,
+    `${c}data_rececao >= $2`,
+    `${c}data_rececao < ($3::date + interval '1 day')`,
+  ];
+  const params = [orgId, de, ate];
+  let i = 4;
   if (cliente) { cond.push(`${c}remetente = $${i++}`); params.push(cliente); }
   if (operador) { cond.push(`${c}operador_atribuido_id = $${i++}`); params.push(operador); }
   if (equipa) { cond.push(`${c}categoria_ticket = $${i++}`); params.push(equipa); }
@@ -99,11 +104,14 @@ async function porOperador(f) {
 }
 
 async function porCategoria(f) {
-  const { where, params } = filtro(f);
+  // Qualificar com `tickets` — `organizacao_id` existe em ambas as tabelas do join.
+  const { where, params } = filtro(f, 'tickets');
   const { rows } = await pool.query(
     `SELECT categoria_ticket, cs.sla_minutos, cs.rotulo, ${metricas()}
        FROM tickets
-       LEFT JOIN canais_sla cs ON cs.categoria = tickets.categoria_ticket
+       LEFT JOIN canais_sla cs
+              ON cs.categoria = tickets.categoria_ticket
+             AND cs.organizacao_id = tickets.organizacao_id
       WHERE ${where}
       GROUP BY categoria_ticket, cs.sla_minutos, cs.rotulo
       ORDER BY total DESC`, params);

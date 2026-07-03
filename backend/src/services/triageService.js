@@ -5,10 +5,9 @@
  * normaliza o texto do email e devolve a categoria da primeira regra que
  * casar, por ordem de prioridade ASC.
  *
- * Desempenho: a 10 000 emails/dia não queremos uma query por email. As
- * regras são lidas para memória e revalidadas a cada CACHE_TTL_MS. Quando
- * o gestor altera regras, pode chamar invalidarCache() (a rota de gestão
- * de regras fá-lo automaticamente).
+ * Multi-tenant: as regras e a cache são POR ORGANIZAÇÃO. A cache é um mapa
+ * organizacao_id -> { regras, ts }, revalidado a cada CACHE_TTL_MS. Quando o
+ * gestor altera regras de uma organização, chama-se invalidarCache(orgId).
  */
 
 const { pool } = require('../config/db');
@@ -16,52 +15,55 @@ const { pool } = require('../config/db');
 const CACHE_TTL_MS = parseInt(process.env.TRIAGEM_CACHE_TTL_MS || '60000', 10); // 60 s
 const CATEGORIA_PADRAO = process.env.TRIAGEM_CATEGORIA_PADRAO || 'comercial';
 
-let cacheRegras = null;
-let cacheTimestamp = 0;
+// organizacao_id -> { regras: [...], ts: number }
+const cachePorOrg = new Map();
 
 /** Remove acentos e baixa para minúsculas — comparação robusta. */
 function normalizar(texto) {
   return (texto || '')
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // diacríticos
+    .replace(/[̀-ͯ]/g, '') // diacríticos
     .toLowerCase();
 }
 
-/** Carrega (com cache) as regras ativas, ordenadas por prioridade ASC. */
-async function obterRegras() {
+/** Carrega (com cache) as regras ativas de UMA organização, por prioridade ASC. */
+async function obterRegras(orgId) {
   const agora = Date.now();
-  if (cacheRegras && agora - cacheTimestamp < CACHE_TTL_MS) {
-    return cacheRegras;
+  const entrada = cachePorOrg.get(orgId);
+  if (entrada && agora - entrada.ts < CACHE_TTL_MS) {
+    return entrada.regras;
   }
   const { rows } = await pool.query(
     `SELECT palavra_chave, categoria, campo_alvo, prioridade
        FROM regras_triagem
-      WHERE ativa = TRUE
-      ORDER BY prioridade ASC, id ASC`
+      WHERE organizacao_id = $1 AND ativa = TRUE
+      ORDER BY prioridade ASC, id ASC`,
+    [orgId]
   );
-  cacheRegras = rows.map((r) => ({
+  const regras = rows.map((r) => ({
     palavra: normalizar(r.palavra_chave),
     categoria: r.categoria,
     campo: r.campo_alvo,
     prioridade: r.prioridade,
   }));
-  cacheTimestamp = agora;
-  return cacheRegras;
+  cachePorOrg.set(orgId, { regras, ts: agora });
+  return regras;
 }
 
-/** Força recarregamento das regras na próxima triagem. */
-function invalidarCache() {
-  cacheRegras = null;
-  cacheTimestamp = 0;
+/** Força recarregamento na próxima triagem. Sem argumento, limpa tudo. */
+function invalidarCache(orgId) {
+  if (orgId === undefined) cachePorOrg.clear();
+  else cachePorOrg.delete(orgId);
 }
 
 /**
- * Classifica um email numa categoria.
+ * Classifica um email numa categoria, dentro de uma organização.
  * @param {{assunto?: string, corpo?: string}} email
+ * @param {string} orgId
  * @returns {Promise<{categoria: string, regra: object|null}>}
  */
-async function triar(email) {
-  const regras = await obterRegras();
+async function triar(email, orgId) {
+  const regras = await obterRegras(orgId);
   const assunto = normalizar(email.assunto);
   const corpo = normalizar(email.corpo);
 

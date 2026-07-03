@@ -52,6 +52,16 @@ const env = {
 
   // Locking
   lockReleaseMinutes: parseInt(process.env.LOCK_RELEASE_MINUTES || '5', 10),
+
+  // Integração servidor-a-servidor (chave de API; se ausente, endpoints 503).
+  integracao: {
+    apiKey: process.env.INTEGRACAO_API_KEY,
+  },
+
+  // Ingestão de email: organização por omissão quando nenhum domínio casa.
+  ingestao: {
+    orgPadrao: (process.env.INGESTAO_ORG_PADRAO || 'demo').toLowerCase().trim(),
+  },
 };
 
 module.exports = { env };

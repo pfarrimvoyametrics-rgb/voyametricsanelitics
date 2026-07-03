@@ -48,10 +48,10 @@ export default function Navbar({ ligado }) {
               <p className="text-sm font-medium leading-tight text-slate-800">{utilizador.nome}</p>
               <p className="text-xs leading-tight text-slate-500">
                 {utilizador.funcao === 'super_admin'
-                  ? 'Super Administrador'
-                  : utilizador.funcao === 'admin'
-                    ? 'Administrador'
-                    : ROTULO_CATEGORIA[utilizador.categoria]}
+                  ? 'Super Administrador · Plataforma'
+                  : `${utilizador.funcao === 'admin' ? 'Administrador' : ROTULO_CATEGORIA[utilizador.categoria] || 'Operador'}${
+                      utilizador.organizacao_nome ? ` · ${utilizador.organizacao_nome}` : ''
+                    }`}
               </p>
             </div>
           </div>

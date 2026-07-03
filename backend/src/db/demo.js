@@ -13,7 +13,7 @@
  */
 const { pool } = require('../config/db');
 const slaService = require('../services/slaService');
-const canalModel = require('../models/canalModel');
+const orgModel = require('../models/orgModel');
 
 const ASSUNTOS = {
   emergencias: [
@@ -45,12 +45,20 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const escolher = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 async function gerarDemo(n = 400) {
-  const { rows: ops } = await pool.query(`SELECT id, categoria FROM usuarios WHERE funcao = 'operador'`);
-  if (!ops.length) throw new Error('Sem operadores na base de dados — corra o seed primeiro (npm run seed).');
+  // Multi-tenant: os dados de demonstração pertencem à organização 'demo'.
+  const org = await orgModel.porSlug('demo');
+  if (!org) throw new Error("Organização 'demo' inexistente — corra as migrações/seed primeiro (npm run db:reset).");
+  const orgId = org.id;
+  const cfgSla = slaService.configDaOrg(org);
+
+  const { rows: ops } = await pool.query(
+    `SELECT id, categoria FROM usuarios WHERE funcao = 'operador' AND organizacao_id = $1`,
+    [orgId]
+  );
+  if (!ops.length) throw new Error('Sem operadores na organização demo — corra o seed primeiro (npm run seed).');
   const porCat = {};
   for (const o of ops) (porCat[o.categoria] ||= []).push(o.id);
 
-  const mapaSla = await canalModel.mapaSla();
   const agora = Date.now();
   let inseridos = 0;
 
@@ -63,7 +71,7 @@ async function gerarDemo(n = 400) {
     if (d.getDay() === 6) d.setDate(d.getDate() + 2);
     d.setHours(Math.floor(rnd(9, 18)), Math.floor(rnd(0, 60)), 0, 0);
     const dataRececao = new Date(d);
-    const slaLimite = slaService.calcularSlaLimite(dataRececao, mapaSla[categoria]);
+    const slaLimite = slaService.calcularSlaLimite(dataRececao, cfgSla);
 
     const opsCat = porCat[categoria] || ops.map((o) => o.id);
     const r = Math.random();
@@ -80,7 +88,7 @@ async function gerarDemo(n = 400) {
         ? slaLimite.getTime() - rnd(5, 90) * 60000
         : slaLimite.getTime() + rnd(10, 600) * 60000;
       dataResolucao = new Date(Math.max(alvo, dataPrimeira.getTime() + 10 * 60000));
-      minUteis = slaService.minutosUteisEntre(dataRececao, dataResolucao);
+      minUteis = slaService.minutosUteisEntre(dataRececao, dataResolucao, cfgSla);
     } else if (r < 0.95) {
       status = 'em_andamento';
       operador = escolher(opsCat);
@@ -113,13 +121,13 @@ async function gerarDemo(n = 400) {
     const oid = `demo-${Date.now().toString(36)}-${i}`;
     const { rowCount } = await pool.query(
       `INSERT INTO tickets
-         (outlook_message_id, remetente, assunto, corpo_email, data_rececao, sla_limite, status,
+         (organizacao_id, outlook_message_id, remetente, assunto, corpo_email, data_rececao, sla_limite, status,
           categoria_ticket, operador_atribuido_id, data_resolucao, data_primeira_atribuicao,
           resultado_venda, valor_venda, minutos_uteis_resolucao, csat, csat_em,
           bilhetes_emitidos, bilhetes_com_erro, emissao_em)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
        ON CONFLICT (outlook_message_id) DO NOTHING`,
-      [oid, escolher(CLIENTES), escolher(ASSUNTOS[categoria]),
+      [orgId, oid, escolher(CLIENTES), escolher(ASSUNTOS[categoria]),
        'Mensagem de demonstração para teste de relatórios.', dataRececao, slaLimite, status,
        categoria, operador, dataResolucao, dataPrimeira, resultado, valor, minUteis, csat, csatEm,
        emitidos, comErro, emissaoEm]
