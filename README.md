@@ -26,7 +26,7 @@ simultâneo, repartidos por categorias.
    │   webhookRoutes ─► graphService.obterMensagem()                │
    │        │                                                       │
    │        ├─► triageService  (regras configuráveis -> categoria)  │
-   │        ├─► slaService      (data_receção + 2 h ÚTEIS)          │
+   │        ├─► slaService      (data_rececao + 2 h ÚTEIS)          │
    │        └─► ticketModel.criar()  ──►  PostgreSQL                 │
    │                                   │                            │
    │   ticketService  ──── emite ─────►│  Socket.io (salas/categoria)│
@@ -74,7 +74,7 @@ Esta é a regra mais sensível do sistema e está implementada e **testada**
 - **Feriados nacionais** portugueses são **excluídos**, incluindo os móveis
   (Sexta-Feira Santa, Páscoa e Corpo de Deus), calculados pelo algoritmo da
   Páscoa — não há tabelas a manter.
-- **Prazo:** `sla_limite = data_receção + 2 horas úteis`.
+- **Prazo:** `sla_limite = data_rececao + 2 horas úteis`.
 
 Exemplos validados nos testes:
 
