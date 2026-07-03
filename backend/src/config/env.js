@@ -57,6 +57,11 @@ const env = {
   integracao: {
     apiKey: process.env.INTEGRACAO_API_KEY,
   },
+
+  // Ingestão de email: organização por omissão quando nenhum domínio casa.
+  ingestao: {
+    orgPadrao: (process.env.INGESTAO_ORG_PADRAO || 'demo').toLowerCase().trim(),
+  },
 };
 
 module.exports = { env };

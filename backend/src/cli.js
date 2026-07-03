@@ -5,6 +5,8 @@
  *   node src/cli.js seed           # aplica seed (regras + perfis + super admin)
  *   node src/cli.js create-admin   # cria/atualiza o super admin a partir do .env
  *   node src/cli.js subscribe      # cria subscrição do Graph
+ *   node src/cli.js demo [n]       # gera n tickets de demonstração (org demo, def. 400)
+ *   node src/cli.js demo:clear     # remove os tickets de demonstração
  */
 const { migrar, pool } = require('./config/db');
 
@@ -41,8 +43,21 @@ async function main() {
         console.log('✅ Subscrição criada:', sub.id);
         break;
       }
+      case 'demo': {
+        const { gerarDemo } = require('./db/demo');
+        const n = parseInt(process.argv[3], 10) || 400;
+        const inseridos = await gerarDemo(n);
+        console.log(`✅ ${inseridos} tickets de demonstração gerados.`);
+        break;
+      }
+      case 'demo:clear': {
+        const { limparDemo } = require('./db/demo');
+        const removidos = await limparDemo();
+        console.log(`✅ ${removidos} tickets de demonstração removidos.`);
+        break;
+      }
       default:
-        console.log('Comandos: migrate | seed | create-admin | subscribe');
+        console.log('Comandos: migrate | seed | create-admin | subscribe | demo [n] | demo:clear');
     }
   } catch (err) {
     console.error('❌ Erro:', err.message);

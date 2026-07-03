@@ -136,10 +136,12 @@ Rotas montadas: `/api/auth`, `/api/usuarios`, `/api/organizacoes`,
 - **Alertas** (`AlertasSla.jsx`): cartão laranja <60 min; toast+som nos 30 min
   finais; popup intermitente quando o SLA é ultrapassado. Respeita
   `prefers-reduced-motion`.
-- **Graph**: OAuth client-credentials; webhook em `/api/webhooks/graph`. ⚠️ A org
-  do email recebido é resolvida como **`demo` hardcoded** (`porSlug('demo')`) —
-  uma caixa partilhada única ainda não distingue clientes (ver Limitações).
-  Subscrição criada no arranque e renovada de 24 em 24 h, **em memória**.
+- **Graph**: OAuth client-credentials; webhook em `/api/webhooks/graph`. A org do
+  email é resolvida pelos **destinatários** (To+Cc) e, em último caso, pelo
+  **remetente**, casando com os `email_dominios` de cada organização
+  (`orgModel.escolherOrgPorEnderecos`); sem correspondência cai em
+  `INGESTAO_ORG_PADRAO` (def. `demo`). Subscrição criada no arranque e renovada de
+  24 em 24 h, **em memória**.
 - **Análise por IA** (`analiseIaService.js`, `/api/analise`): o Claude analisa o
   **volume de tickets por equipa** num laço agêntico com ferramentas read-only
   parametrizadas (nunca escreve SQL); resposta completa e em *streaming* (SSE).
@@ -157,13 +159,14 @@ Rotas montadas: `/api/auth`, `/api/usuarios`, `/api/organizacoes`,
   (sem ela, 503). Comparação da chave em tempo constante (`timingSafeEqual`).
 
 ## ⚠️ Limitações conhecidas (ver `MELHORIAS.md`)
-- **Ingestão mono-org**: o webhook atribui todos os emails à org `demo`
-  (`webhookRoutes.js`) — falta rotear por destinatário/alias para multi-tenant
-  real (**P0-4**). É a limitação de âmbito que resta.
+- **Uma caixa partilhada**: a ingestão já roteia por organização
+  (`email_dominios`, ver Graph acima), mas assume **uma** caixa/subscrição Graph
+  partilhada — o roteamento depende de haver aliases por org nessa caixa. Uma
+  caixa por organização fica para evolução futura.
 
-> As pontas soltas da consolidação (D-1…D-6: evento de tempo real da integração,
-> consulta S2S por id, `ingestaoService` órfão, `db/demo.js`, páginas do frontend
-> por ligar, comentário do `auth.js`) foram **resolvidas** — ver `HISTORICO.md §0.3`.
+> A dívida da consolidação (D-1…D-6) e o roteamento de ingestão (P0-4) foram
+> **resolvidos** e validados (testes 21/21; E2E em Docker) — ver
+> `HISTORICO.md §0.3`.
 
 ## Ao trabalhar neste repositório
 - Explorar e **propor antes de implementar**; pedir confirmação em mudanças estruturais.

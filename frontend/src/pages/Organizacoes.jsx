@@ -4,10 +4,49 @@ import { api } from '../api/client';
 const FORM_VAZIO = {
   nome: '',
   slug: '',
+  email_dominios: '',
   admin_nome: '',
   admin_email: '',
   admin_password: '',
 };
+
+/**
+ * EditorDominios — edição inline dos domínios/endereços que roteiam a ingestão
+ * de email para uma organização (ver P0-4 / webhook).
+ */
+function EditorDominios({ org, aoGuardar }) {
+  const [valor, setValor] = useState(org.email_dominios || '');
+  const [estado, setEstado] = useState(''); // '' | a-guardar | ok | erro
+  async function guardar() {
+    setEstado('a-guardar');
+    try {
+      await aoGuardar(org.id, valor.trim());
+      setEstado('ok');
+      setTimeout(() => setEstado(''), 1500);
+    } catch {
+      setEstado('erro');
+    }
+  }
+  return (
+    <div className="mt-1.5 flex items-center gap-2">
+      <input
+        value={valor}
+        onChange={(e) => setValor(e.target.value)}
+        placeholder="domínios de email: acme.pt, suporte@acme.pt"
+        className="w-full rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 focus:border-indigo-400 focus:outline-none"
+      />
+      <button
+        onClick={guardar}
+        disabled={estado === 'a-guardar'}
+        className="shrink-0 rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+      >
+        Guardar
+      </button>
+      {estado === 'ok' && <span className="text-xs text-emerald-600">✓</span>}
+      {estado === 'erro' && <span className="text-xs text-rose-600">erro</span>}
+    </div>
+  );
+}
 
 function sugerirSlug(nome) {
   return (nome || '')
@@ -46,6 +85,7 @@ export default function Organizacoes({ orgs, orgAtivaId, aoSelecionar, aoRecarre
     setErro(''); setSucesso(''); setAGravar(true);
     try {
       const payload = { nome: form.nome, slug: form.slug };
+      if (form.email_dominios.trim()) payload.email_dominios = form.email_dominios.trim();
       if (form.admin_email || form.admin_nome || form.admin_password) {
         payload.admin = { nome: form.admin_nome, email: form.admin_email, password: form.admin_password };
       }
@@ -69,6 +109,11 @@ export default function Organizacoes({ orgs, orgAtivaId, aoSelecionar, aoRecarre
     } catch (e) {
       setErro(e.message);
     }
+  }
+
+  async function guardarDominios(id, valor) {
+    await api.atualizarEmailDominiosOrganizacao(id, valor);
+    await aoRecarregar();
   }
 
   return (
@@ -96,6 +141,12 @@ export default function Organizacoes({ orgs, orgAtivaId, aoSelecionar, aoRecarre
               <input value={form.slug} onChange={alterar('slug')} required pattern="[a-z0-9-]+" placeholder="agencia-sol"
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
               <p className="mt-1 text-xs text-slate-400">Apenas minúsculas, números e hífen.</p>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">Domínios de email (opcional)</label>
+              <input value={form.email_dominios} onChange={alterar('email_dominios')} placeholder="acme.pt, suporte@acme.pt"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+              <p className="mt-1 text-xs text-slate-400">Emails para estes domínios/endereços são atribuídos a esta organização.</p>
             </div>
 
             <div className="rounded-lg bg-slate-50 p-3">
@@ -136,6 +187,7 @@ export default function Organizacoes({ orgs, orgAtivaId, aoSelecionar, aoRecarre
                       {!o.ativo && <span className="ml-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">inativa</span>}
                     </p>
                     <p className="truncate text-xs text-slate-500">{o.slug}</p>
+                    <EditorDominios org={o} aoGuardar={guardarDominios} />
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     {!ativa && o.ativo && (

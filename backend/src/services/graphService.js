@@ -121,7 +121,7 @@ async function renovarSubscricao(subscriptionId) {
 
 /** Lê uma mensagem por id e devolve os campos que nos interessam. */
 async function obterMensagem(messageId) {
-  const campos = '$select=id,subject,from,receivedDateTime,bodyPreview,body';
+  const campos = '$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,bodyPreview,body';
   const resp = await graphFetch(
     `/users/${encodeURIComponent(env.graph.mailbox)}/messages/${messageId}?${campos}`
   );
@@ -130,10 +130,16 @@ async function obterMensagem(messageId) {
     throw new Error(`[graph] Falha ao ler mensagem ${messageId} (${resp.status}): ${txt}`);
   }
   const m = await resp.json();
+  // Destinatários (To + Cc) — usados para rotear o email para a organização certa.
+  const destinatarios = []
+    .concat(m.toRecipients || [], m.ccRecipients || [])
+    .map((r) => r?.emailAddress?.address)
+    .filter(Boolean);
   return {
     outlookMessageId: m.id,
     assunto: m.subject || '(sem assunto)',
     remetente: m.from?.emailAddress?.address || 'desconhecido',
+    destinatarios,
     dataRececao: m.receivedDateTime,
     corpoEmail: m.body?.content || m.bodyPreview || '',
   };

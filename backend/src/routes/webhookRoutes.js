@@ -31,17 +31,21 @@ async function processarNotificacao(io, notificacao) {
     const messageId = notificacao.resourceData?.id;
     if (!messageId) return;
 
-    // Multi-tenant: por agora existe UMA caixa partilhada (config global), que
-    // mapeamos para a organização 'demo'. O Graph por-cliente (uma caixa por
-    // organização) fica para uma iteração futura.
-    const org = await orgModel.porSlug('demo');
-    if (!org) {
-      console.warn('[webhook] Organização "demo" inexistente — notificação ignorada.');
-      return;
-    }
-
     // 1) Ler o email completo
     const email = await graphService.obterMensagem(messageId);
+
+    // Multi-tenant: roteia o email para a organização pelos DESTINATÁRIOS (e, em
+    // último caso, pelo REMETENTE), comparando com os domínios/endereços que cada
+    // organização declara (`email_dominios`). Sem correspondência, cai na
+    // organização por omissão (INGESTAO_ORG_PADRAO, 'demo') — retrocompatível.
+    const enderecos = [...(email.destinatarios || []), email.remetente].filter(Boolean);
+    const orgs = await orgModel.listar();
+    let org = orgModel.escolherOrgPorEnderecos(orgs, enderecos);
+    if (!org) org = await orgModel.porSlug(env.ingestao.orgPadrao);
+    if (!org || !org.ativo) {
+      console.warn(`[webhook] Sem organização-alvo (padrão "${env.ingestao.orgPadrao}") — notificação ignorada.`);
+      return;
+    }
 
     // 2) Triagem -> categoria (regras da organização)
     const { categoria } = await triageService.triar({

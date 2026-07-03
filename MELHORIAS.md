@@ -38,6 +38,8 @@ Pontas soltas identificadas na revisão do commit `8995aa5`, **todas corrigidas*
   INSERT nem incluía `organizacao_id` (NOT NULL) — rebentava.
 - **Feito:** usa a org `demo` (`orgModel.porSlug`), `slaService.configDaOrg(org)`,
   o novo `slaService.minutosUteisEntre(...)` e inclui `organizacao_id` no INSERT.
+  Comandos `demo`/`demo:clear` ligados no `cli.js` (estavam por expor). Validado
+  E2E: `node src/cli.js demo 150` gera tickets contra Postgres real.
 
 ### D-5 · ✅ Páginas do frontend ligadas
 - Era: `Relatorios`/`Canais`/`CsatPublic` existiam mas não estavam no `App.jsx`,
@@ -89,13 +91,20 @@ Restam as pontas soltas na secção **D** acima.
   reconciliar no arranque; *delta sync* periódico de segurança.
 - **Onde:** `services/graphService.js`, `server.js`, tabela `subscricoes`, job.
 
-### P0-4 · ❌ Roteamento de ingestão por organização
-- **Porquê:** o webhook atribui **todos** os emails à org `demo` (hardcoded em
-  `webhookRoutes.js`). Com >1 organização real, é uma falha de isolamento dos
-  dados de ingestão.
-- **O quê:** rotear o email para a org certa (por destinatário/alias/domínio, ou
-  uma caixa por org), antes de criar o ticket.
-- **Onde:** `routes/webhookRoutes.js`, `models/orgModel.js`.
+### P0-4 · ✅ Roteamento de ingestão por organização (feito)
+- Era: o webhook atribuía **todos** os emails à org `demo` (hardcoded).
+- **Feito:** cada organização declara `email_dominios` (domínios/aliases); o
+  webhook resolve a org pelos **destinatários** (To+Cc) e, em último caso, pelo
+  **remetente** (`orgModel.escolherOrgPorEnderecos`, função pura testada). Sem
+  correspondência, cai na org por omissão (`INGESTAO_ORG_PADRAO`, def. `demo`) —
+  **retrocompatível**. `graphService.obterMensagem` passou a devolver os
+  destinatários; UI para editar os domínios em `Organizacoes.jsx`
+  (`PATCH /api/organizacoes/:id/email-dominios`, super_admin).
+- **Nota:** continua a assumir **uma caixa partilhada** — o roteamento por
+  destinatário exige aliases por organização nessa caixa. Uma caixa (subscrição
+  Graph) por organização fica para evolução futura.
+- **Onde:** `migrations/005_ingestao_por_org.sql`, `routes/webhookRoutes.js`,
+  `models/orgModel.js`, `services/graphService.js`, `routes/orgRoutes.js`.
 
 ---
 
@@ -180,5 +189,5 @@ CRUD por org com provador e invalidação de cache (`/api/regras`,
 ---
 
 ### Sugestão de sequência
-(A dívida **D-1…D-6 já foi fechada.**) P0-1 (endurecer) → P0-4 (ingestão por
-org) → P0-2 → P0-3 → P1-1 → P1-2 → (restantes P1) → P2.
+(A dívida **D-1…D-6** e a **P0-4** já estão fechadas.) P0-1 (endurecer) → P0-2
+→ P0-3 → P1-1 → P1-2 → (restantes P1) → P2.

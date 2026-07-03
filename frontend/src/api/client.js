@@ -115,6 +115,8 @@ export const api = {
   criarOrganizacao: (dados) => pedir('/organizacoes', { method: 'POST', body: JSON.stringify(dados) }),
   definirAtivoOrganizacao: (id, ativo) =>
     pedir(`/organizacoes/${id}/ativo`, { method: 'PATCH', body: JSON.stringify({ ativo }) }),
+  atualizarEmailDominiosOrganizacao: (id, email_dominios) =>
+    pedir(`/organizacoes/${id}/email-dominios`, { method: 'PATCH', body: JSON.stringify({ email_dominios }) }),
   // Canais — alvo de SLA por categoria (admin):
   canais: () => pedir('/canais'),
   atualizarCanal: (categoria, slaMinutos) =>

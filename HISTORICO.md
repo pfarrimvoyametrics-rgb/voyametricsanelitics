@@ -81,8 +81,19 @@ compilar):
   `api/client.js` (incl. download binário de PDF); Chart.js/SheetJS por CDN.
 - **D-6** — comentário do `middleware/auth.js` actualizado.
 
-Fica em aberto a limitação de âmbito **P0-4** (ingestão mono-org: o webhook ainda
-atribui tudo à org `demo`), que exige uma decisão de produto sobre o roteamento.
+### 0.4 Roteamento de ingestão por organização (P0-4) e validação E2E
+- **P0-4 feito:** cada organização declara `email_dominios`; o webhook resolve a
+  org pelos destinatários (To+Cc) e, em último caso, pelo remetente
+  (`orgModel.escolherOrgPorEnderecos`, pura e testada), com queda para a org por
+  omissão (`INGESTAO_ORG_PADRAO`, `demo`) — retrocompatível. Migração `005`,
+  `graphService` a devolver destinatários, UI em `Organizacoes.jsx`. Também se
+  ligaram os comandos `demo`/`demo:clear` no `cli.js` (estavam por expor).
+  Resta a limitação de âmbito de haver **uma** caixa partilhada única.
+- **Validação E2E (Docker, `docker compose up`):** migrações `001`–`005`
+  aplicadas; `node src/cli.js demo 150` gera tickets contra Postgres real (prova
+  a correcção D-4); login (JWT), `GET /api/relatorios` (agregações + insights),
+  fluxo CSAT completo (GET → POST → 409 na 2.ª), `PATCH …/email-dominios` (P0-4)
+  e a SPA servida em :8080 com Chart.js/SheetJS — **tudo OK**. Testes: **21/21**.
 
 ### 0.3 Limpeza do repositório
 - Removida a pasta aninhada `ticket-system/` (uma cópia do *commit* inicial,
