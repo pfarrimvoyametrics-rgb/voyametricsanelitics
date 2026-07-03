@@ -124,8 +124,7 @@ Rotas montadas: `/api/auth`, `/api/usuarios`, `/api/organizacoes`,
   (`utils/password.js`, `bcryptjs`); JWT de 12 h com `organizacao_id` no payload
   (`middleware/auth.js`). O super admin é criado no arranque
   (`SUPER_ADMIN_EMAIL`/`_PASSWORD`, mín. 8 chars); demo semeada por código com
-  `SEED_DEMO_PASSWORD` (`demo1234`). *(Nota: o cabeçalho de `middleware/auth.js`
-  ainda descreve o antigo login só-por-email — comentário obsoleto.)*
+  `SEED_DEMO_PASSWORD` (`demo1234`).
 - **Triagem por org**: `triageService.triar(email, orgId)` lê as `regras_triagem`
   ativas da org (cache `Map` orgId→regras, TTL 60 s), devolve a categoria da 1.ª
   regra que casa por prioridade; omissão `comercial`. Geridas na UI
@@ -157,19 +156,14 @@ Rotas montadas: `/api/auth`, `/api/usuarios`, `/api/organizacoes`,
   preenche resultado/valor da venda e emissão de bilhetes. `INTEGRACAO_API_KEY`
   (sem ela, 503). Comparação da chave em tempo constante (`timingSafeEqual`).
 
-## ⚠️ Limitações conhecidas / pontas soltas (ver `MELHORIAS.md`)
+## ⚠️ Limitações conhecidas (ver `MELHORIAS.md`)
 - **Ingestão mono-org**: o webhook atribui todos os emails à org `demo`
-  (`webhookRoutes.js`) — falta rotear por destinatário/alias para multi-tenant real.
-- **Páginas por ligar**: `Relatorios.jsx`, `Canais.jsx` e `CsatPublic.jsx`
-  existem e têm backend, mas **não estão ligadas** ao `App.jsx`/`main.jsx` (o
-  link público `?csat=<id>` ainda não é interpretado).
-- **`services/ingestaoService.js`** é código **órfão** (não é importado; o webhook
-  tem a sua própria lógica) e usa assinaturas antigas de SLA/canal — alinhar ou remover.
-- **Evento tempo-real da integração partido**: `integracaoRoutes` emite para
-  `ticketService.SALA_ADMINS` (já não existe) — o painel não actualiza após um
-  registo de venda/emissão.
-- **`db/demo.js`** usa assinaturas antigas (`mapaSla()` sem org; `calcularSlaLimite`
-  com número) — o gerador de demonstração precisa de correcção.
+  (`webhookRoutes.js`) — falta rotear por destinatário/alias para multi-tenant
+  real (**P0-4**). É a limitação de âmbito que resta.
+
+> As pontas soltas da consolidação (D-1…D-6: evento de tempo real da integração,
+> consulta S2S por id, `ingestaoService` órfão, `db/demo.js`, páginas do frontend
+> por ligar, comentário do `auth.js`) foram **resolvidas** — ver `HISTORICO.md §0.3`.
 
 ## Ao trabalhar neste repositório
 - Explorar e **propor antes de implementar**; pedir confirmação em mudanças estruturais.

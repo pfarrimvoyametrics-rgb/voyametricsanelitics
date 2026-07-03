@@ -64,6 +64,26 @@ ao `App.jsx`; `services/ingestaoService.js` é código órfão com assinaturas a
 a integração emite um evento de tempo real para uma sala que já não existe
 (`ticketService.SALA_ADMINS`); e `db/demo.js` usa assinaturas antigas de SLA/canal.
 
+### 0.3 Correcção da dívida da consolidação (D-1…D-6)
+As pontas soltas acima foram **todas corrigidas** (testes: 15/15; frontend a
+compilar):
+- **D-1** — a integração passou a emitir para `salaAdmins(ticket.organizacao_id)`
+  (o painel volta a actualizar em tempo real após venda/emissão).
+- **D-2** — novo `ticketModel.porIdGlobal(id)` (leitura sem org, só para a
+  integração S2S) + resolução unificada por `resolverReferencia`; o `GET
+  /api/integracoes/ticket?ticketId=…` deixa de dar 404.
+- **D-3** — `services/ingestaoService.js` (órfão) **removido**; o `webhookRoutes.js`
+  é o ponto de ingestão.
+- **D-4** — `db/demo.js` alinhado: org `demo`, `configDaOrg`, novo
+  `slaService.minutosUteisEntre(...)` (com testes) e `organizacao_id` no INSERT.
+- **D-5** — `Relatorios`/`Canais` ligados aos painéis (admin e super_admin),
+  `CsatPublic` montado por `?csat=<id>`; métodos em falta acrescentados ao
+  `api/client.js` (incl. download binário de PDF); Chart.js/SheetJS por CDN.
+- **D-6** — comentário do `middleware/auth.js` actualizado.
+
+Fica em aberto a limitação de âmbito **P0-4** (ingestão mono-org: o webhook ainda
+atribui tudo à org `demo`), que exige uma decisão de produto sobre o roteamento.
+
 ### 0.3 Limpeza do repositório
 - Removida a pasta aninhada `ticket-system/` (uma cópia do *commit* inicial,
   redundante face à raiz). Os documentos de *handoff* que só existiam nessa cópia

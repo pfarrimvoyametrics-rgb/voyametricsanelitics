@@ -99,6 +99,16 @@ async function porId(id, orgId) {
 }
 
 /**
+ * Lê um ticket por id SEM filtro de organização. Uso restrito à integração
+ * servidor-a-servidor (autenticada por API key global, sem contexto de org).
+ * NÃO usar em rotas de utilizador (usar `porId(id, orgId)`).
+ */
+async function porIdGlobal(id) {
+  const { rows } = await pool.query(`SELECT * FROM tickets WHERE id = $1`, [id]);
+  return rows[0] || null;
+}
+
+/**
  * Atribui um ticket a um operador de forma ATÓMICA, dentro da organização.
  * Só tem sucesso se o ticket ainda estiver 'pendente' (evita corrida
  * entre dois operadores a clicar ao mesmo tempo).
@@ -312,7 +322,9 @@ module.exports = {
   criar,
   listarParaUtilizador,
   porId,
+  porIdGlobal,
   porIdPublico,
+  resolverReferencia,
   atribuirSeLivre,
   libertar,
   resolver,

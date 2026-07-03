@@ -148,6 +148,42 @@ function calcularSlaLimite(dataRececao, cfg) {
 }
 
 /**
+ * Conta os MINUTOS ÚTEIS decorridos entre dois instantes (para métricas de
+ * resolução). Soma, dia a dia, a interseção de [inicio, fim] com a janela útil
+ * de cada dia útil (respeitando fim-de-semana e feriados nacionais + extra).
+ * @param {Date|string} inicio
+ * @param {Date|string} fim
+ * @param {object} [cfg] — configuração da organização (fallback global).
+ * @returns {number} minutos úteis (0 se fim <= inicio).
+ */
+function minutosUteisEntre(inicio, fim, cfg) {
+  const c = resolverConfig(cfg);
+  const a = inicio instanceof Date ? inicio : new Date(inicio);
+  const b = fim instanceof Date ? fim : new Date(fim);
+  if (b <= a) return 0;
+
+  let total = 0;
+  const dia = new Date(a);
+  dia.setHours(0, 0, 0, 0);
+  const ultimo = new Date(b);
+  ultimo.setHours(0, 0, 0, 0);
+
+  let guarda = 0;
+  const MAX_ITER = 5 * 366 + 10; // salvaguarda (~5 anos)
+  while (dia <= ultimo && guarda++ < MAX_ITER) {
+    if (isDiaUtil(dia, c)) {
+      const janIni = comMinutos(dia, c.inicioMin);
+      const janFim = comMinutos(dia, c.fimMin);
+      const ini = a > janIni ? a : janIni;
+      const f = b < janFim ? b : janFim;
+      if (f > ini) total += Math.round((f - ini) / 60000);
+    }
+    dia.setDate(dia.getDate() + 1);
+  }
+  return total;
+}
+
+/**
  * Constrói uma `config` a partir de uma linha de `organizacoes`, com fallback
  * para os valores globais quando um campo é NULL.
  * @param {object|null} org — linha da organização (colunas sla_*, feriados_extra).
@@ -169,6 +205,7 @@ function configDaOrg(org) {
 module.exports = {
   calcularSlaLimite,
   adicionarMinutosUteis,
+  minutosUteisEntre,
   isDiaUtil,
   ajustarParaJanelaUtil,
   configDaOrg,

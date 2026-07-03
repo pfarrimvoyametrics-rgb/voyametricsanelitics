@@ -13,56 +13,45 @@ Estado: ✅ feito · ⚠️ parcial · ❌ por fazer.
 
 ---
 
-## D — Dívida da consolidação multi-tenant (arrumar primeiro)
+## D — Dívida da consolidação multi-tenant ✅ RESOLVIDA
 
-Pontas soltas identificadas na revisão do commit `8995aa5`. São pequenas e de
-alto valor — convém fechar antes de construir mais por cima.
+Pontas soltas identificadas na revisão do commit `8995aa5`, **todas corrigidas**
+(ver `HISTORICO.md §0.3`). Registo para memória:
 
-### D-1 · ❌ Integração emite para uma sala que já não existe
-- **Sintoma:** após um registo de venda/emissão pela integração, **nenhum painel
-  actualiza em tempo real**. `integracaoRoutes.js` faz
-  `io.to(ticketService.SALA_ADMINS)…`, mas o `ticketService` já **não** exporta
-  `SALA_ADMINS` (só `salaCategoria`/`salaAdmins`) → `io.to(undefined)`.
-- **Correcção:** emitir para `salaAdmins(ticket.organizacao_id)`.
-- **Onde:** `routes/integracaoRoutes.js` (~linhas 47 e 76).
+### D-1 · ✅ Integração emitia para uma sala que já não existe
+- Era: `integracaoRoutes.js` fazia `io.to(ticketService.SALA_ADMINS)…` (undefined)
+  → o painel não actualizava após venda/emissão.
+- **Feito:** passou a emitir para `salaAdmins(ticket.organizacao_id)`.
 
-### D-2 · ❌ Consulta de ticket por `ticketId` na integração devolve sempre 404
-- **Sintoma:** `GET /api/integracoes/ticket?ticketId=…` chama
-  `ticketModel.porId(ticketId)` sem `orgId`; a query é `... AND organizacao_id = $2`
-  com `$2 = undefined` (→ NULL) e nunca casa.
-- **Correcção:** ter uma leitura por id sem org para a integração (S2S), ou
-  aceitar org explícita. O caminho por `conversationId` funciona.
-- **Onde:** `routes/integracaoRoutes.js`, `models/ticketModel.js`.
+### D-2 · ✅ `GET /api/integracoes/ticket?ticketId=…` devolvia sempre 404
+- Era: `ticketModel.porId(ticketId)` sem `orgId` (a query filtra por org).
+- **Feito:** novo `ticketModel.porIdGlobal(id)` (leitura sem org, uso restrito à
+  integração S2S) + resolução unificada por `resolverReferencia`.
 
-### D-3 · ❌ `ingestaoService.js` órfão e com assinaturas antigas
-- **Sintoma:** o "ponto único de ingestão" documentado **não é importado** por
-  ninguém (o webhook tem a sua própria cópia da lógica). Além disso chama
-  `triageService.triar({…})` sem `orgId` e `canalModel.mapaSla()` sem `orgId`, e
-  passa um número a `calcularSlaLimite` (que espera um objecto config).
-- **Correcção:** alinhar com `webhookRoutes.js` (multi-tenant) e reutilizá-lo, ou
-  **remover** o ficheiro para não confundir.
-- **Onde:** `services/ingestaoService.js`.
+### D-3 · ✅ `ingestaoService.js` órfão removido
+- Era: código não importado por ninguém (o webhook tem a sua própria lógica
+  multi-tenant) e com assinaturas antigas de SLA/canal.
+- **Feito:** ficheiro **removido**. O `webhookRoutes.js` é o ponto de ingestão.
 
-### D-4 · ❌ Gerador de demonstração (`db/demo.js`) desalinhado
-- **Sintoma:** usa `canalModel.mapaSla()` sem `orgId` e `calcularSlaLimite(data,
-  numero)` — assinaturas antigas; o `npm run` de demo provavelmente rebenta ou
-  calcula SLA inválido.
-- **Correcção:** passar `orgId` e usar `slaService.configDaOrg(org)`.
-- **Onde:** `backend/src/db/demo.js`.
+### D-4 · ✅ Gerador de demonstração (`db/demo.js`) alinhado
+- Era: `canalModel.mapaSla()` sem `orgId`, `calcularSlaLimite(data, número)`, e o
+  INSERT nem incluía `organizacao_id` (NOT NULL) — rebentava.
+- **Feito:** usa a org `demo` (`orgModel.porSlug`), `slaService.configDaOrg(org)`,
+  o novo `slaService.minutosUteisEntre(...)` e inclui `organizacao_id` no INSERT.
 
-### D-5 · ⚠️ Ligar as páginas órfãs do frontend
-- **Sintoma:** `Relatorios.jsx`, `Canais.jsx` e `CsatPublic.jsx` existem e têm
-  backend, mas **não estão ligadas** ao `App.jsx`/`main.jsx`. O link público de
-  CSAT (`?csat=<id>`) não é interpretado.
-- **Correcção:** acrescentar as vistas de Relatórios/Canais ao painel de admin e
-  montar o `CsatPublic` quando o URL traz `?csat=<id>` (antes do ecrã de login).
-- **Onde:** `frontend/src/App.jsx`, `frontend/src/main.jsx`.
+### D-5 · ✅ Páginas do frontend ligadas
+- Era: `Relatorios`/`Canais`/`CsatPublic` existiam mas não estavam no `App.jsx`,
+  e os métodos de API que consomem nem existiam no `client.js`.
+- **Feito:** separadores "Relatórios" e "Canais" nos painéis de admin e
+  super_admin; `CsatPublic` montado quando o URL traz `?csat=<id>` (antes do
+  login); métodos em falta acrescentados ao `api/client.js` (`canais`,
+  `atualizarCanal`, `csatObter`, `csatEnviar`, `relatorios`, `usuarios`,
+  `baixarRelatorioPdf`/`baixarLiderancaPdf` com download binário); Chart.js e
+  SheetJS carregados por CDN no `index.html`.
 
-### D-6 · ⚠️ Comentário obsoleto no `middleware/auth.js`
-- **Sintoma:** o cabeçalho ainda descreve "login simplificado só por email, sem
-  palavra-passe" — falso desde que o `authRoutes` passou a usar bcrypt.
-- **Correcção:** actualizar o comentário (trivial).
-- **Onde:** `backend/src/middleware/auth.js` (topo).
+### D-6 · ✅ Comentário obsoleto no `middleware/auth.js` corrigido
+- Era: descrevia "login só por email, sem palavra-passe".
+- **Feito:** cabeçalho actualizado (email + palavra-passe bcrypt + multi-tenant).
 
 ---
 
@@ -191,5 +180,5 @@ CRUD por org com provador e invalidação de cache (`/api/regras`,
 ---
 
 ### Sugestão de sequência
-D-1…D-6 (fechar a dívida da consolidação) → P0-1 (endurecer) → P0-4 (ingestão
-por org) → P0-2 → P0-3 → P1-1 → P1-2 → (restantes P1) → P2.
+(A dívida **D-1…D-6 já foi fechada.**) P0-1 (endurecer) → P0-4 (ingestão por
+org) → P0-2 → P0-3 → P1-1 → P1-2 → (restantes P1) → P2.

@@ -44,7 +44,7 @@ router.post('/venda', async (req, res) => {
 
     // Atualiza os painéis em tempo real.
     const io = req.app.get('io');
-    if (io) io.to(ticketService.SALA_ADMINS).emit('metricas:atualizar');
+    if (io) io.to(ticketService.salaAdmins(ticket.organizacao_id)).emit('metricas:atualizar');
 
     res.json({
       ok: true,
@@ -73,7 +73,7 @@ router.post('/emissao', async (req, res) => {
     if (!ticket) return res.status(404).json({ erro: 'Ticket não encontrado para a referência indicada.' });
 
     const io = req.app.get('io');
-    if (io) io.to(ticketService.SALA_ADMINS).emit('metricas:atualizar');
+    if (io) io.to(ticketService.salaAdmins(ticket.organizacao_id)).emit('metricas:atualizar');
 
     res.json({ ok: true, ticket });
   } catch (err) {
@@ -85,11 +85,14 @@ router.post('/emissao', async (req, res) => {
 // GET /api/integracoes/ticket
 router.get('/ticket', async (req, res) => {
   const { ticketId, outlookMessageId, conversationId } = req.query;
+  if (!ticketId && !outlookMessageId && !conversationId) {
+    return res.status(400).json({ erro: 'Indique uma referência: ticketId, outlookMessageId ou conversationId.' });
+  }
   try {
-    let ticket = null;
-    if (ticketId) ticket = await ticketModel.porId(ticketId);
-    else if (conversationId) ticket = await ticketModel.porConversaAberta(conversationId);
-    // (outlookMessageId fica para evolução futura, se necessário)
+    // Integração S2S (chave global, sem contexto de organização): resolve a
+    // referência e lê o ticket sem filtro de org.
+    const id = await ticketModel.resolverReferencia({ ticketId, outlookMessageId, conversationId });
+    const ticket = id ? await ticketModel.porIdGlobal(id) : null;
     if (!ticket) return res.status(404).json({ erro: 'Ticket não encontrado.' });
     res.json(ticket);
   } catch (err) {
