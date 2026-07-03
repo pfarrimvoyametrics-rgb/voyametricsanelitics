@@ -36,24 +36,33 @@ ainda não está** — para não induzir em erro quem retomar o trabalho.
 - **Testes**: passaram de 7 para **12 casos** (`sla.test.js` + `extras.test.js`),
   cobrindo o SLA e a normalização da triagem. Correr com `TZ=Europe/Lisbon`.
 
-### 0.2 Segunda vaga — no repo mas AINDA POR INTEGRAR
-Foram esboçadas várias funcionalidades cujo código (rotas, models, serviços e
-páginas) já existe, mas que **não estão montadas** no `server.js` e cujo
-**esquema de BD não foi criado** na migração `001_init.sql`. Não funcionam como
-estão; ver `CLAUDE.md` e a nova **P0-0** em `MELHORIAS.md` para o caminho de
-conclusão. Em resumo:
-- **CSAT** (inquérito público pós-resolução) — falta coluna `tickets.csat`.
-- **Canais / SLA por canal** — falta tabela `canais_sla`; introduz um conjunto
-  de **7 categorias** (emergências, alterações, cotações, reclamações, suporte
-  técnico, facturação, comercial) que ainda não substitui as 3 semeadas.
-- **Relatórios + PDF** (`relatorioRoutes`, `insightsService`, `pdfRelatorio`,
-  `pdfLideranca`, `Relatorios.jsx`) — precisa de `pdfkit` (em falta no
-  `package.json`) e de várias colunas novas em `tickets`.
-- **Integração servidor-a-servidor** (`integracaoRoutes`, `apiKey`) — sistema
-  externo preenche resultado/valor de venda via `x-api-key`; precisa de
-  `conversation_id`, `resultado_venda`, `valor_venda`.
-- **Parametrização** (gestão de utilizadores) e **KPIs da fila** — dependem de
-  endpoints possivelmente incompletos (ex.: `/api/tickets/meus-kpis`).
+### 0.2 Consolidação multi-tenant (commit `8995aa5`)
+A "segunda vaga" deixou de ser esboço: foi **integrada e alargada** a uma
+arquitectura **multi-tenant** completa. Todas as rotas passaram a estar montadas
+no `server.js` e o esquema foi criado nas migrações `002`–`004`. Em resumo:
+- **Multi-tenant** — tabela `organizacoes` e coluna `organizacao_id` em
+  `usuarios`/`tickets`/`regras_triagem`/`canais_sla`. Novo papel isolado por
+  organização; `middleware/auth.js › resolverOrg` garante que admin/operador só
+  acedem à sua org (o `x-org-id` do cliente é ignorado) e que o super_admin opera
+  uma org via header. Sockets passaram a salas por org (`org:<id>:cat:<cat>` e
+  `org:<id>:admins`).
+- **SLA por organização** — cada org pode ter janela, prazo (minutos úteis) e
+  feriados extra próprios; NULL = usar o global do ambiente (`slaService`).
+- **Regras de triagem na UI** — CRUD por org (`/api/regras`, `RegrasTriagem.jsx`)
+  com invalidação de cache; resolve a antiga **P2-2**.
+- **CSAT** (`/api/csat`, público por UUID), **Relatórios + PDF** (`/api/relatorios`,
+  `pdfkit` acrescentado ao `package.json`), **Canais** (`/api/canais`, alvo de SLA
+  por categoria por org, informativo) e **Integração S2S** (`/api/integracoes`,
+  `x-api-key`) — todos montados e com o esquema de BD respectivo.
+- **Gestão de utilizadores e organizações na UI** — `GestaoUtilizadores.jsx`,
+  `ConfigSla.jsx`, página `Organizacoes.jsx` (super_admin).
+
+**Pontas soltas identificadas** (registadas em `MELHORIAS.md`, secção "Dívida da
+consolidação"): a ingestão por webhook atribui tudo à org `demo` (hardcoded); as
+páginas `Relatorios`/`Canais`/`CsatPublic` existem mas ainda **não estão ligadas**
+ao `App.jsx`; `services/ingestaoService.js` é código órfão com assinaturas antigas;
+a integração emite um evento de tempo real para uma sala que já não existe
+(`ticketService.SALA_ADMINS`); e `db/demo.js` usa assinaturas antigas de SLA/canal.
 
 ### 0.3 Limpeza do repositório
 - Removida a pasta aninhada `ticket-system/` (uma cópia do *commit* inicial,
